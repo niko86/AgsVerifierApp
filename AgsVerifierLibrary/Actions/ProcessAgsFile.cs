@@ -20,7 +20,6 @@ namespace AgsVerifierLibrary.Actions
         private readonly List<RuleErrorModel> _ruleErrors;
         private readonly List<AgsGroupModel> _agsGroups;
 
-        private string _csvString;
         private AgsGroupModel _currentGroup;
         
         public ProcessAgsFile(string agsFilePath, DataFrame stdDictGroup = null)
@@ -87,8 +86,6 @@ namespace AgsVerifierLibrary.Actions
 
         private void ProcessHeadingRow(CsvReader csv)
         {
-            _csvString += csv.Parser.RawRecord;
-
             for (int i = 0; i < csv.Parser.Record.Length; i++)
             {
                 AGSColumn agsColumn = new() { Index = i, Heading = csv.Parser.Record[i] };
@@ -98,8 +95,6 @@ namespace AgsVerifierLibrary.Actions
 
         private void ProcessUnitRow(CsvReader csv)
         {
-            //_csvString += csv.Parser.RawRecord;
-
             for (int i = 0; i < _currentGroup.Columns.Count; i++)
             {
                 var heading = _currentGroup.Columns.FirstOrDefault(c => c.Index == i);
@@ -109,8 +104,6 @@ namespace AgsVerifierLibrary.Actions
 
         private void ProcessTypeRow(CsvReader csv)
         {
-            //_csvString += csv.Parser.RawRecord;
-
             for (int i = 0; i < _currentGroup.Columns.Count; i++)
             {
                 var heading = _currentGroup.Columns.FirstOrDefault(c => c.Index == i);
@@ -120,19 +113,16 @@ namespace AgsVerifierLibrary.Actions
 
         private void ProcessDataRow(CsvReader csv)
         {
-            _csvString += csv.Parser.RawRecord;
-
             for (int i = 0; i < _currentGroup.Columns.Count; i++)
             {
                 var heading = _currentGroup.Columns.FirstOrDefault(c => c.Index == i);
-                heading.DataColumn.Add(csv.Parser.Record[i]);
+                heading.Data.Add(csv.Parser.Record[i]);
             }
         }
 
         private void ProcessNewlineDivision()
         {
-            _currentGroup.DataFrame = DataFrame.LoadCsvFromString(_csvString);
-            _csvString = string.Empty;
+            _currentGroup.DataFrame = AgsGroupModelToDataFrame.ReturnDataFrame(_currentGroup);
         }
     }
 }

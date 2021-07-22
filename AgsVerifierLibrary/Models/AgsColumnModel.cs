@@ -8,7 +8,7 @@ namespace AgsVerifierLibrary.Models
 		public string Heading { get; set; }
 		public string Type { get; set; }
 		public string Unit { get; set; }
-		public List<string> DataColumn { get; set; } = new();
+		public List<string> Data { get; set; } = new();
 		public StatusEnum Status { get; set; }
 	}
 }

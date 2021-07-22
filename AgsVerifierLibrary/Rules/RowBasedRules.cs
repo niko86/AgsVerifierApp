@@ -26,7 +26,7 @@ namespace AgsVerifierLibrary.Rules
             Rule6(csv, errors, groupName);
             Rule19(csv, errors, groupName);
             Rule19a(csv, errors, groupName);
-            Rule19b_1(csv, errors, groupName, df);
+            //Rule19b_1(csv, errors, groupName, df); // Add to group checks
         }
 
         private static void Rule1(CsvReader csv, List<RuleErrorModel> errors)
@@ -173,7 +173,7 @@ namespace AgsVerifierLibrary.Rules
 
             var rawSplit = Regex.Split(csv.Parser.RawRecord.TrimEnd(), @",(?=(?:""[^""]*?(?:[^""]*)*))|,(?=[^"", ]+(?:, |$))");
 
-            bool containsOrphanQuotes = csv.Parser.Record.Any(r => r.Contains('"'));
+            bool containsOrphanQuotes = csv.Parser.Record.Count(r => r.Contains('"')) / 2 > 0;
 
             if (containsOrphanQuotes)
             {

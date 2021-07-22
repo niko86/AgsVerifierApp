@@ -25,11 +25,11 @@ namespace AgsVerifierLibrary
             _stdDictionary = processAgsFile.ReturnGroupModels(rowChecks: false); // Dictionaries not compliant with \r\n line ending rule why was having issues with df
         }
 
-        public void ParseAgsFile(string filePath)
+        public void ParseAgsFile(string filePath) //TODO add indexes for group heading unit type and data (1st only??)
         {
             DataFrame df = _stdDictionary.FirstOrDefault(d => d.Name == "DICT").DataFrame;
             ProcessAgsFile processAgsFile = new(filePath, df);
-            _agsGroups = processAgsFile.ReturnGroupModels(rowChecks: true);
+            _agsGroups = processAgsFile.ReturnGroupModels(rowChecks: true);   
         }
     }
 }
