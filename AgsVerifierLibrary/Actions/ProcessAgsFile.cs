@@ -2,21 +2,17 @@
 using AgsVerifierLibrary.Rules;
 using CsvHelper;
 using CsvHelper.Configuration;
-using Microsoft.Data.Analysis;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AgsVerifierLibrary.Actions
 {
     public class ProcessAgsFile
     {
         private readonly string _agsFilePath;
-        private readonly AgsGroupModel _stdDictGroup;
         private readonly List<RuleErrorModel> _ruleErrors;
         private readonly List<AgsGroupModel> _agsGroups;
         private static readonly Type _groupType = typeof(AgsGroupModel);
@@ -25,10 +21,9 @@ namespace AgsVerifierLibrary.Actions
         private AgsGroupModel _currentGroup;
         private int _groupCounter = 1;
 
-        public ProcessAgsFile(string agsFilePath, AgsGroupModel stdDictGroup = null, List<RuleErrorModel> ruleErrors = null)
+        public ProcessAgsFile(string agsFilePath, List<RuleErrorModel> ruleErrors = null)
         {
             _agsFilePath = agsFilePath;
-            _stdDictGroup = stdDictGroup;
 
             _ruleErrors = ruleErrors;
             _agsGroups = new List<AgsGroupModel>();
@@ -53,7 +48,7 @@ namespace AgsVerifierLibrary.Actions
             using var csv = new CsvReader(reader, csvConfig);
             while (csv.Read())
             {
-                if (csv.Parser.RawRecord == @"\r\n")
+                if (csv.Parser.RawRecord == Environment.NewLine)
                     continue;
 
                 switch (csv.GetField(0))
@@ -76,7 +71,7 @@ namespace AgsVerifierLibrary.Actions
                 }
 
                 if (rowChecks) // Position is important, check book to see if this is correct code model.
-                    RowBasedRules.CheckRow(csv, _ruleErrors, _currentGroup, _stdDictGroup);
+                    RowBasedRules.CheckRow(csv, _ruleErrors, _currentGroup);
             }
 
             // Catches last group

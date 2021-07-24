@@ -1,12 +1,8 @@
 ﻿using AgsVerifierLibrary.Actions;
 using AgsVerifierLibrary.Models;
 using AgsVerifierLibrary.Rules;
-using Microsoft.Data.Analysis;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AgsVerifierLibrary
 {
@@ -29,10 +25,11 @@ namespace AgsVerifierLibrary
 
         public void ParseAgsFile(string filePath) 
         {
-            AgsGroupModel stdDictGroup = _stdDictionary.FirstOrDefault(d => d.Name == "DICT");
-            ProcessAgsFile processAgsFile = new(filePath, stdDictGroup, _ruleErrors);
+            ProcessAgsFile processAgsFile = new(filePath, _ruleErrors);
             _agsGroups = processAgsFile.ReturnGroupModels(rowChecks: true);
-            GroupBasedRules.CheckGroups(_agsGroups, _ruleErrors);
+            
+            GroupBasedRules groupRules = new(_agsGroups, _stdDictionary, _ruleErrors);
+            groupRules.CheckGroups();
         }
     }
 }

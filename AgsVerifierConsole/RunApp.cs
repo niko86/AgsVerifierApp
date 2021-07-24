@@ -1,13 +1,8 @@
 ﻿using AgsVerifierLibrary;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AgsVerifierConsole
 {
-	public class RunApp
+    public class RunApp
 	{
 		private DataAccess _dataAccess;
 
@@ -22,7 +17,7 @@ namespace AgsVerifierConsole
 			_dataAccess.ParseAgsDictionary(dictPath);
 			_dataAccess.ParseAgsFile(filePath);
 
-			_dataAccess.
+			//_dataAccess.
 		}
 	}
 }

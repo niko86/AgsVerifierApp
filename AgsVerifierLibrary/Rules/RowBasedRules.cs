@@ -1,7 +1,5 @@
 ﻿using AgsVerifierLibrary.Models;
 using CsvHelper;
-using Microsoft.Data.Analysis;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,7 +14,7 @@ namespace AgsVerifierLibrary.Rules
         private static readonly Regex _regexOnlyWhiteSpace = new(@"^\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         
         
-        public static void CheckRow(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group, AgsGroupModel stdDictGroup)
+        public static void CheckRow(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
         {
             Rule1(csv, errors);
             Rule2a(csv, errors, group);
@@ -26,9 +24,6 @@ namespace AgsVerifierLibrary.Rules
             Rule4b(csv, errors, group);
             Rule5(csv, errors, group);
             Rule6();
-            Rule19(csv, errors, group);
-            Rule19a(csv, errors, group);
-            Rule19b_1(csv, errors, group, stdDictGroup);
         }
 
         private static void Rule1(CsvReader csv, List<RuleErrorModel> errors)
@@ -222,137 +217,6 @@ namespace AgsVerifierLibrary.Rules
         private static void Rule6()
         {
             return;
-        }
-
-        private static void Rule19(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
-        {
-            if (csv.GetField(0) != "GROUP")
-                return;
-
-            if (csv.GetField(1).Length == 4 && csv.GetField(1).All(c => char.IsUpper(c)))
-                return;
-
-            errors.Add(new RuleErrorModel()
-            {
-                Status = "Fail",
-                RuleId = "19",
-                RowNumber = csv.Parser.RawRow,
-                Group = group.Name,
-                Message = "GROUP name should consist of four uppercase letters.",
-            }
-            );
-        }
-
-        private static void Rule19a(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
-        {
-            if (csv.GetField(0) != "HEADING")
-                return;
-
-            if (csv.Parser.Record.Length > 1)
-            {
-                csv.Parser.Record[1..]
-                    .Where(r => _regexAgsHeadingField.IsMatch(r))
-                    .ToList()
-                    .ForEach(field => errors.Add(
-                        new RuleErrorModel()
-                        {
-                            Status = "Fail",
-                            RuleId = "19a",
-                            RowNumber = csv.Parser.RawRow,
-                            Group = group.Name,
-                            Field = field,
-                            Message = $"HEADING {field} should consist of only uppercase letters, numbers, and an underscore character.",
-                        })
-                        );
-
-                csv.Parser.Record[1..]
-                    .Where(r => r.Length > 9)
-                    .ToList()
-                    .ForEach(field => errors.Add(
-                        new RuleErrorModel()
-                        {
-                            Status = "Fail",
-                            RuleId = "19a",
-                            RowNumber = csv.Parser.RawRow,
-                            Group = group.Name,
-                            Field = field,
-                            Message = $"HEADING {field} is more than 9 characters in length.",
-                        })
-                        );
-
-                return;
-            }
-
-            errors.Add(new RuleErrorModel()
-            {
-                Status = "Fail",
-                RuleId = "19a",
-                RowNumber = csv.Parser.RawRow,
-                Group = group.Name,
-                Message = "HEADING row does not have any fields.",
-            }
-            );
-        }
-
-        private static void Rule19b_1(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group, AgsGroupModel stdDictGroup)
-        {
-            if (csv.GetField(0) != "HEADING")
-                return;
-
-            if (csv.Parser.Record.Length < 2)
-                return;
-
-            foreach (var field in csv.Parser.Record[1..])
-            {
-                if (field.Contains('_') == false)
-                {
-                    errors.Add(
-                        new RuleErrorModel()
-                        {
-                            Status = "Fail",
-                            RuleId = "19b_1",
-                            RowNumber = csv.Parser.RawRow,
-                            Group = group.Name,
-                            Field = field,
-                            Message = $"HEADING {field} should consist of group name and field name separated by \"_\".",
-                        });
-
-                    return;
-                }
-
-                string[] splitHeading = field.Split('_');
-
-                if (splitHeading[0].Length != 4 || splitHeading[1].Length > 4) //!= 4) or (len(item.split('_')[1]) > 4
-                {
-                    errors.Add(
-                        new RuleErrorModel()
-                        {
-                            Status = "Fail",
-                            RuleId = "19b_1",
-                            RowNumber = csv.Parser.RawRow,
-                            Group = group.Name,
-                            Field = field,
-                            Message = $"HEADING {field} should consist of a 4 character group name and a field name of up to 4 characters.",
-                        });
-                }
-
-                bool groupNameExists = stdDictGroup.Columns.FirstOrDefault(c => c.Heading == "DICT_GRP").Data.Distinct().Any(s => s == splitHeading[0]);
-                //bool groupNameExists = df.Columns["DICT_GRP"].Cast<string>().Distinct().Any(s => s == splitHeading[0]);
-
-                if (groupNameExists == false)
-                {
-                    errors.Add(
-                        new RuleErrorModel()
-                        {
-                            Status = "Fail",
-                            RuleId = "19b_1",
-                            RowNumber = csv.Parser.RawRow,
-                            Group = group.Name,
-                            Field = field,
-                            Message = $"HEADING {field} group name not present in the standard dictionary.",
-                        });
-                }
-            }
         }
     }
 }
