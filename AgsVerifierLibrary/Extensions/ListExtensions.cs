@@ -10,11 +10,12 @@ namespace AgsVerifierLibrary.Extensions
 {
     public static class ListExtensions
     {
+		private static readonly Regex _dateTimeRegex = new(@"(?=(?<!h:)m{2,4}(?!\s))(?<!\s)m{2,4}(?!:s)|(?<!h:)m{2,4}(?!:s)", RegexOptions.Compiled);
+
 		public static List<DateTime?> CoerseToDateTime(this List<string> list, string unit)
 		{
 			List<DateTime?> output = new();
-			string pattern = @"(?=(?<!h:)m{2,4}(?!\s))(?<!\s)m{2,4}(?!:s)|(?<!h:)m{2,4}(?!:s)";
-			var correctedUnit = Regex.Replace(unit, pattern, m => m.Value.ToUpper());
+			var correctedUnit = _dateTimeRegex.Replace(unit, m => m.Value.ToUpper());
 
 			foreach (var item in list)
 			{

@@ -9,24 +9,26 @@ using System.Text.RegularExpressions;
 
 namespace AgsVerifierLibrary.Rules
 {
-    class RowBasedRules
+    public static class RowBasedRules
     {
-        public static void CheckRow(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group, DataFrame df)
+        private static readonly Regex _regexCsvRowSplit = new(@",(?=(?:""[^""]*?(?:[^""]*)*))|,(?=[^"", ]+(?:, |$))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex _regexAgsHeadingField = new(@"[^A-Z0-9_]", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        private static readonly Regex _regexOnlyWhiteSpace = new(@"^\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        
+        
+        public static void CheckRow(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group, AgsGroupModel stdDictGroup)
         {
-            string groupName = group.Name;
-            string[] headings = group.Columns.Select(c => c.Heading).ToArray();
-
             Rule1(csv, errors);
-            Rule2a(csv, errors, groupName);
-            Rule2c(csv, errors, groupName);
-            Rule3(csv, errors, groupName);
-            Rule4a(csv, errors, groupName);
-            Rule4b(csv, errors, groupName, headings);
-            Rule5(csv, errors, groupName);
-            Rule6(csv, errors, groupName);
-            Rule19(csv, errors, groupName);
-            Rule19a(csv, errors, groupName);
-            //Rule19b_1(csv, errors, groupName, df); // Add to group checks
+            Rule2a(csv, errors, group);
+            Rule2c(csv, errors, group);
+            Rule3(csv, errors, group);
+            Rule4a(csv, errors, group);
+            Rule4b(csv, errors, group);
+            Rule5(csv, errors, group);
+            Rule6();
+            Rule19(csv, errors, group);
+            Rule19a(csv, errors, group);
+            Rule19b_1(csv, errors, group, stdDictGroup);
         }
 
         private static void Rule1(CsvReader csv, List<RuleErrorModel> errors)
@@ -43,7 +45,7 @@ namespace AgsVerifierLibrary.Rules
             });
         }
 
-        private static void Rule2a(CsvReader csv, List<RuleErrorModel> errors, string groupName)
+        private static void Rule2a(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
         {
             if (csv.Parser.RawRecord.EndsWith("\r\n"))
                 return;
@@ -53,13 +55,13 @@ namespace AgsVerifierLibrary.Rules
                 Status = "Fail",
                 RuleId = "2a",
                 RowNumber = csv.Parser.RawRow,
-                Group = groupName,
+                Group = group.Name,
                 Message = "Is not terminated by <CR> and <LF> characters.",
             }
             );
         }
 
-        private static void Rule2c(CsvReader csv, List<RuleErrorModel> errors, string groupName)
+        private static void Rule2c(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
         {
             if (csv.GetField(0) != "HEADING")
                 return;
@@ -72,13 +74,13 @@ namespace AgsVerifierLibrary.Rules
                 Status = "Fail",
                 RuleId = "2c",
                 RowNumber = csv.Parser.RawRow,
-                Group = groupName,
+                Group = group.Name,
                 Message = "HEADER row has duplicate fields.",
             }
             );
         }
 
-        private static void Rule3(CsvReader csv, List<RuleErrorModel> errors, string groupName)
+        private static void Rule3(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
         {
             List<string> descriptors = new() { "GROUP", "HEADING", "TYPE", "UNIT", "DATA" };
 
@@ -90,13 +92,13 @@ namespace AgsVerifierLibrary.Rules
                 Status = "Fail",
                 RuleId = "3",
                 RowNumber = csv.Parser.RawRow,
-                Group = groupName,
+                Group = group.Name,
                 Message = "Does not start with a valid data descriptor.",
             }
             );
         }
 
-        private static void Rule4a(CsvReader csv, List<RuleErrorModel> errors, string groupName)
+        private static void Rule4a(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
         {
             if (csv.GetField(0) != "GROUP")
                 return;
@@ -111,7 +113,7 @@ namespace AgsVerifierLibrary.Rules
                     Status = "Fail",
                     RuleId = "4a",
                     RowNumber = csv.Parser.RawRow,
-                    Group = groupName,
+                    Group = group.Name,
                     Message = "GROUP row has more than one field.",
                 });
                 return;
@@ -122,37 +124,36 @@ namespace AgsVerifierLibrary.Rules
                 Status = "Fail",
                 RuleId = "4a",
                 RowNumber = csv.Parser.RawRow,
-                Group = groupName,
+                Group = group.Name,
                 Message = "GROUP row is malformed.",
             }
             );
         }
 
-        private static void Rule4b(CsvReader csv, List<RuleErrorModel> errors, string groupName, string[] headings)
+        private static void Rule4b(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
         {
-            if (csv.Parser.RawRecord == "\r\n" || csv.Parser.RawRecord == "\n")
-                return;
-
             List<string> descriptors = new() { "TYPE", "UNIT", "DATA" };
 
             if (descriptors.Any(d => d.Contains(csv.GetField(0))) == false)
                 return;
 
-            if (headings == null)
+            if (group.Columns.Select(c => c.Heading) == null)
             {
                 errors.Add(new RuleErrorModel()
                 {
                     Status = "Fail",
                     RuleId = "4b",
                     RowNumber = csv.Parser.RawRow,
-                    Group = groupName,
+                    Group = group.Name,
                     Message = "HEADING row missing.",
                 }
                 );
                 return;
             }
 
-            if (headings.Length == csv.Parser.Record.Length)
+            var headings = group.Columns.Select(c => c.Heading);
+
+            if (headings.Count() == csv.Parser.Record.Length)
                 return;
 
             errors.Add(new RuleErrorModel()
@@ -160,18 +161,18 @@ namespace AgsVerifierLibrary.Rules
                 Status = "Fail",
                 RuleId = "4b",
                 RowNumber = csv.Parser.RawRow,
-                Group = groupName,
+                Group = group.Name,
                 Message = "Number of fields does not match the HEADING row.",
             }
             );
         }
 
-        private static void Rule5(CsvReader csv, List<RuleErrorModel> errors, string groupName)
+        private static void Rule5(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
         {
             if (csv.Parser.RawRecord == "\r\n" || csv.Parser.RawRecord == "\n")
                 return;
 
-            var rawSplit = Regex.Split(csv.Parser.RawRecord.TrimEnd(), @",(?=(?:""[^""]*?(?:[^""]*)*))|,(?=[^"", ]+(?:, |$))");
+            var rawSplit = _regexCsvRowSplit.Split(csv.Parser.RawRecord.TrimEnd());
 
             bool containsOrphanQuotes = csv.Parser.Record.Count(r => r.Contains('"')) / 2 > 0;
 
@@ -182,12 +183,12 @@ namespace AgsVerifierLibrary.Rules
                     Status = "Fail",
                     RuleId = "5",
                     RowNumber = csv.Parser.RawRow,
-                    Group = groupName,
+                    Group = group.Name,
                     Message = "Contains quotes within a data field. All such quotes should be enclosed by a second quote.",
                 });
             }
 
-            bool containsOnlySpaces = csv.Parser.Record.Where(r => Regex.IsMatch(r, @"^\s*$") && string.IsNullOrEmpty(r) == false).Count() > 0;
+            bool containsOnlySpaces = csv.Parser.Record.Where(r => _regexOnlyWhiteSpace.IsMatch(r) && string.IsNullOrEmpty(r) == false).Any();
 
             if (containsOnlySpaces)
             {
@@ -196,7 +197,7 @@ namespace AgsVerifierLibrary.Rules
                     Status = "Fail",
                     RuleId = "5",
                     RowNumber = csv.Parser.RawRow,
-                    Group = groupName,
+                    Group = group.Name,
                     Message = "Contains only white space characters.",
                 });
             }
@@ -212,18 +213,18 @@ namespace AgsVerifierLibrary.Rules
                 Status = "Fail",
                 RuleId = "5",
                 RowNumber = csv.Parser.RawRow,
-                Group = groupName,
+                Group = group.Name,
                 Message = "Contains fields that are not enclosed in double quotes.",
             }
             );
         }
 
-        private static void Rule6(CsvReader csv, List<RuleErrorModel> errors, string groupName)
+        private static void Rule6()
         {
             return;
         }
 
-        private static void Rule19(CsvReader csv, List<RuleErrorModel> errors, string groupName)
+        private static void Rule19(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
         {
             if (csv.GetField(0) != "GROUP")
                 return;
@@ -236,13 +237,13 @@ namespace AgsVerifierLibrary.Rules
                 Status = "Fail",
                 RuleId = "19",
                 RowNumber = csv.Parser.RawRow,
-                Group = groupName,
+                Group = group.Name,
                 Message = "GROUP name should consist of four uppercase letters.",
             }
             );
         }
 
-        private static void Rule19a(CsvReader csv, List<RuleErrorModel> errors, string groupName)
+        private static void Rule19a(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
         {
             if (csv.GetField(0) != "HEADING")
                 return;
@@ -250,7 +251,7 @@ namespace AgsVerifierLibrary.Rules
             if (csv.Parser.Record.Length > 1)
             {
                 csv.Parser.Record[1..]
-                    .Where(r => Regex.IsMatch(r, @"[^A-Z0-9_]"))
+                    .Where(r => _regexAgsHeadingField.IsMatch(r))
                     .ToList()
                     .ForEach(field => errors.Add(
                         new RuleErrorModel()
@@ -258,7 +259,7 @@ namespace AgsVerifierLibrary.Rules
                             Status = "Fail",
                             RuleId = "19a",
                             RowNumber = csv.Parser.RawRow,
-                            Group = groupName,
+                            Group = group.Name,
                             Field = field,
                             Message = $"HEADING {field} should consist of only uppercase letters, numbers, and an underscore character.",
                         })
@@ -273,7 +274,7 @@ namespace AgsVerifierLibrary.Rules
                             Status = "Fail",
                             RuleId = "19a",
                             RowNumber = csv.Parser.RawRow,
-                            Group = groupName,
+                            Group = group.Name,
                             Field = field,
                             Message = $"HEADING {field} is more than 9 characters in length.",
                         })
@@ -287,13 +288,13 @@ namespace AgsVerifierLibrary.Rules
                 Status = "Fail",
                 RuleId = "19a",
                 RowNumber = csv.Parser.RawRow,
-                Group = groupName,
+                Group = group.Name,
                 Message = "HEADING row does not have any fields.",
             }
             );
         }
 
-        private static void Rule19b_1(CsvReader csv, List<RuleErrorModel> errors, string groupName, DataFrame df)
+        private static void Rule19b_1(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group, AgsGroupModel stdDictGroup)
         {
             if (csv.GetField(0) != "HEADING")
                 return;
@@ -311,7 +312,7 @@ namespace AgsVerifierLibrary.Rules
                             Status = "Fail",
                             RuleId = "19b_1",
                             RowNumber = csv.Parser.RawRow,
-                            Group = groupName,
+                            Group = group.Name,
                             Field = field,
                             Message = $"HEADING {field} should consist of group name and field name separated by \"_\".",
                         });
@@ -329,13 +330,14 @@ namespace AgsVerifierLibrary.Rules
                             Status = "Fail",
                             RuleId = "19b_1",
                             RowNumber = csv.Parser.RawRow,
-                            Group = groupName,
+                            Group = group.Name,
                             Field = field,
                             Message = $"HEADING {field} should consist of a 4 character group name and a field name of up to 4 characters.",
                         });
                 }
 
-                bool groupNameExists = df.Columns["DICT_GRP"].Cast<string>().Distinct().Any(s => s == splitHeading[0]);
+                bool groupNameExists = stdDictGroup.Columns.FirstOrDefault(c => c.Heading == "DICT_GRP").Data.Distinct().Any(s => s == splitHeading[0]);
+                //bool groupNameExists = df.Columns["DICT_GRP"].Cast<string>().Distinct().Any(s => s == splitHeading[0]);
 
                 if (groupNameExists == false)
                 {
@@ -345,7 +347,7 @@ namespace AgsVerifierLibrary.Rules
                             Status = "Fail",
                             RuleId = "19b_1",
                             RowNumber = csv.Parser.RawRow,
-                            Group = groupName,
+                            Group = group.Name,
                             Field = field,
                             Message = $"HEADING {field} group name not present in the standard dictionary.",
                         });

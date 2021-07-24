@@ -22,9 +22,7 @@ namespace AgsVerifierConsole
 			_dataAccess.ParseAgsDictionary(dictPath);
 			_dataAccess.ParseAgsFile(filePath);
 
-			//var groups = ProcessFile(filePath, true); // TEMP added true to stop error checks
-
-			//GroupBaseRules.CheckGroups(groups, RuleErrors);
+			_dataAccess.
 		}
 	}
 }

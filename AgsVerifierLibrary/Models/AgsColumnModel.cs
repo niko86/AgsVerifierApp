@@ -2,7 +2,7 @@
 
 namespace AgsVerifierLibrary.Models
 {
-	public class AGSColumn
+	public class AGSColumnModel
 	{
 		public int Index { get; set; }
 		public string Heading { get; set; }

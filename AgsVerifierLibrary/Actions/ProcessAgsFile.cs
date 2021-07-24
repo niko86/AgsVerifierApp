@@ -16,22 +16,25 @@ namespace AgsVerifierLibrary.Actions
     public class ProcessAgsFile
     {
         private readonly string _agsFilePath;
-        private readonly DataFrame _stdDictGroup;
+        private readonly AgsGroupModel _stdDictGroup;
         private readonly List<RuleErrorModel> _ruleErrors;
         private readonly List<AgsGroupModel> _agsGroups;
+        private static readonly Type _groupType = typeof(AgsGroupModel);
+        private static readonly Type _columnType = typeof(AGSColumnModel);
 
         private AgsGroupModel _currentGroup;
-        
-        public ProcessAgsFile(string agsFilePath, DataFrame stdDictGroup = null)
+        private int _groupCounter = 1;
+
+        public ProcessAgsFile(string agsFilePath, AgsGroupModel stdDictGroup = null, List<RuleErrorModel> ruleErrors = null)
         {
             _agsFilePath = agsFilePath;
             _stdDictGroup = stdDictGroup;
 
-            _ruleErrors = new List<RuleErrorModel>();
+            _ruleErrors = ruleErrors;
             _agsGroups = new List<AgsGroupModel>();
         }
 
-        public List<AgsGroupModel> ReturnGroupModels(bool rowChecks)
+        public List<AgsGroupModel> ReturnGroupModels(bool rowChecks) // Instaniate at DataAccess and pass the list in???
         {
             Process(rowChecks);
             return _agsGroups;
@@ -50,6 +53,9 @@ namespace AgsVerifierLibrary.Actions
             using var csv = new CsvReader(reader, csvConfig);
             while (csv.Read())
             {
+                if (csv.Parser.RawRecord == @"\r\n")
+                    continue;
+
                 switch (csv.GetField(0))
                 {
                     case "GROUP":
@@ -69,58 +75,79 @@ namespace AgsVerifierLibrary.Actions
                         break;
                 }
 
-                if (csv.Parser.RawRecord == Environment.NewLine)
-                    ProcessNewlineDivision();
-
                 if (rowChecks) // Position is important, check book to see if this is correct code model.
                     RowBasedRules.CheckRow(csv, _ruleErrors, _currentGroup, _stdDictGroup);
             }
+
+            // Catches last group
+            ProcessCurrentGroup();
         }
         private void ProcessGroupRow(CsvReader csv)
         {
-            AgsGroupModel agsGroup = new() { Name = csv.GetField(1) };
+            if (_currentGroup is not null)
+                ProcessCurrentGroup();
+
+            AgsGroupModel agsGroup = new() { Index = _groupCounter, Name = csv.GetField(1), GroupRow = csv.Parser.RawRow };
             _agsGroups.Add(agsGroup);
 
             _currentGroup = agsGroup;
+            _groupCounter++;
         }
 
         private void ProcessHeadingRow(CsvReader csv)
         {
-            for (int i = 0; i < csv.Parser.Record.Length; i++)
-            {
-                AGSColumn agsColumn = new() { Index = i, Heading = csv.Parser.Record[i] };
-                _currentGroup.Columns.Add(agsColumn);
-            }
+            AssignProperties(csv, "Heading");
         }
 
         private void ProcessUnitRow(CsvReader csv)
         {
-            for (int i = 0; i < _currentGroup.Columns.Count; i++)
-            {
-                var heading = _currentGroup.Columns.FirstOrDefault(c => c.Index == i);
-                heading.Unit = csv.Parser.Record[i];
-            }
+            AssignProperties(csv, "Unit");
         }
 
         private void ProcessTypeRow(CsvReader csv)
         {
-            for (int i = 0; i < _currentGroup.Columns.Count; i++)
-            {
-                var heading = _currentGroup.Columns.FirstOrDefault(c => c.Index == i);
-                heading.Type = csv.Parser.Record[i];
-            }
+            AssignProperties(csv, "Type");
         }
 
         private void ProcessDataRow(CsvReader csv)
         {
-            for (int i = 0; i < _currentGroup.Columns.Count; i++)
+            if (_currentGroup.FirstDataRow == 0)
+                _currentGroup.FirstDataRow = csv.Parser.RawRow;
+
+            for (int i = 0; i < csv.Parser.Record.Length; i++)
             {
-                var heading = _currentGroup.Columns.FirstOrDefault(c => c.Index == i);
-                heading.Data.Add(csv.Parser.Record[i]);
+                var column = _currentGroup.Columns.FirstOrDefault(c => c.Index == i);
+                column.Data.Add(csv.Parser.Record[i]);
             }
         }
 
-        private void ProcessNewlineDivision()
+        private void AssignProperties(CsvReader csv, string agsField)
+        {
+            if (_currentGroup.Columns == null)
+                GenerateColumns(csv.Parser.Record.Length);
+
+            _groupType.GetProperty(agsField + "Row").SetValue(_currentGroup, csv.Parser.RawRow, null);
+
+            for (int i = 0; i < csv.Parser.Record.Length; i++)
+            {
+                var column = _currentGroup.Columns.FirstOrDefault(c => c.Index == i);
+                _columnType.GetProperty(agsField).SetValue(column, csv.Parser.Record[i], null);
+            }
+        }
+
+        private void GenerateColumns(int length)
+        {
+            _currentGroup.Columns = new List<AGSColumnModel>();
+
+            for (int i = 0; i < length; i++)
+            {
+                AGSColumnModel agsColumn = new();
+                agsColumn.Index = i;
+                _currentGroup.Columns.Add(agsColumn);
+            }
+        }
+
+        private void ProcessCurrentGroup()
         {
             _currentGroup.DataFrame = AgsGroupModelToDataFrame.ReturnDataFrame(_currentGroup);
         }

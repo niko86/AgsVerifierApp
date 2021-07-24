@@ -1,5 +1,6 @@
 ﻿using AgsVerifierLibrary.Actions;
 using AgsVerifierLibrary.Models;
+using AgsVerifierLibrary.Rules;
 using Microsoft.Data.Analysis;
 using System;
 using System.Collections.Generic;
@@ -11,25 +12,27 @@ namespace AgsVerifierLibrary
 {
     public class DataAccess
     {
+        private readonly List<RuleErrorModel> _ruleErrors;
         private List<AgsGroupModel> _stdDictionary;
         private List<AgsGroupModel> _agsGroups;
 
         public DataAccess()
         {
-
+            _ruleErrors = new List<RuleErrorModel>();
         }
 
         public void ParseAgsDictionary(string dictPath)
         {
             ProcessAgsFile processAgsFile = new(dictPath);
-            _stdDictionary = processAgsFile.ReturnGroupModels(rowChecks: false); // Dictionaries not compliant with \r\n line ending rule why was having issues with df
+            _stdDictionary = processAgsFile.ReturnGroupModels(rowChecks: false);
         }
 
-        public void ParseAgsFile(string filePath) //TODO add indexes for group heading unit type and data (1st only??)
+        public void ParseAgsFile(string filePath) 
         {
-            DataFrame df = _stdDictionary.FirstOrDefault(d => d.Name == "DICT").DataFrame;
-            ProcessAgsFile processAgsFile = new(filePath, df);
-            _agsGroups = processAgsFile.ReturnGroupModels(rowChecks: true);   
+            AgsGroupModel stdDictGroup = _stdDictionary.FirstOrDefault(d => d.Name == "DICT");
+            ProcessAgsFile processAgsFile = new(filePath, stdDictGroup, _ruleErrors);
+            _agsGroups = processAgsFile.ReturnGroupModels(rowChecks: true);
+            GroupBasedRules.CheckGroups(_agsGroups, _ruleErrors);
         }
     }
 }
