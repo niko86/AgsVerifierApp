@@ -58,6 +58,8 @@ namespace AgsVerifierLibrary.Rules
 
         private static void Rule2c(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
         {
+            // DOES THIS EXIST???
+
             if (csv.GetField(0) != "HEADING")
                 return;
 

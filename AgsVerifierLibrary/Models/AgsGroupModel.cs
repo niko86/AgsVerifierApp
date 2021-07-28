@@ -13,7 +13,8 @@ namespace AgsVerifierLibrary.Models
 		public int UnitRow { get; set; }
 		public int TypeRow { get; set; }
 		public int FirstDataRow { get; set; }
-		public List<AGSColumnModel> Columns { get; set; }
+		public string ParentGroup { get; set; }
+		public List<AgsColumnModel> Columns { get; set; }
 		public DataFrame DataFrame { get; set; }
 	}
 }

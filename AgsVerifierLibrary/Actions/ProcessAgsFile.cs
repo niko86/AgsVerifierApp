@@ -1,4 +1,5 @@
-﻿using AgsVerifierLibrary.Models;
+﻿using AgsVerifierLibrary.Extensions;
+using AgsVerifierLibrary.Models;
 using AgsVerifierLibrary.Rules;
 using CsvHelper;
 using CsvHelper.Configuration;
@@ -7,26 +8,27 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using static AgsVerifierLibrary.Models.AgsEnum;
 
 namespace AgsVerifierLibrary.Actions
 {
     public class ProcessAgsFile
     {
         private readonly string _agsFilePath;
-        private readonly List<RuleErrorModel> _ruleErrors;
         private readonly List<AgsGroupModel> _agsGroups;
-        private static readonly Type _groupType = typeof(AgsGroupModel);
-        private static readonly Type _columnType = typeof(AGSColumnModel);
+        private readonly List<RuleErrorModel> _ruleErrors;
+        private readonly AgsGroupModel _stdDictGroup;
 
         private AgsGroupModel _currentGroup;
         private int _groupCounter = 1;
 
-        public ProcessAgsFile(string agsFilePath, List<RuleErrorModel> ruleErrors = null)
+        public ProcessAgsFile(string agsFilePath, List<RuleErrorModel> ruleErrors = null, List<AgsGroupModel> stdDictionary = null)
         {
             _agsFilePath = agsFilePath;
 
             _ruleErrors = ruleErrors;
             _agsGroups = new List<AgsGroupModel>();
+            _stdDictGroup = stdDictionary?.GetGroup("DICT");
         }
 
         public List<AgsGroupModel> ReturnGroupModels(bool rowChecks) // Instaniate at DataAccess and pass the list in???
@@ -77,12 +79,20 @@ namespace AgsVerifierLibrary.Actions
             // Catches last group
             ProcessCurrentGroup();
         }
+
         private void ProcessGroupRow(CsvReader csv)
         {
             if (_currentGroup is not null)
-                ProcessCurrentGroup();
+                ProcessCurrentGroup();         
 
             AgsGroupModel agsGroup = new() { Index = _groupCounter, Name = csv.GetField(1), GroupRow = csv.Parser.RawRow };
+
+            if (_stdDictGroup is not null)
+            {
+                // why not do at the end and combine the two dictionaries
+                agsGroup.ParentGroup = _stdDictGroup.GetRowsByFilter("DICT_GRP", csv.GetField(1)).Filter("DICT_TYPE", "GROUP").ReturnFirstValue("DICT_PGRP");
+            }
+
             _agsGroups.Add(agsGroup);
 
             _currentGroup = agsGroup;
@@ -91,17 +101,20 @@ namespace AgsVerifierLibrary.Actions
 
         private void ProcessHeadingRow(CsvReader csv)
         {
-            AssignProperties(csv, "Heading");
+            AssignProperties(csv, Descriptor.HEADING);
+            
+            if (_stdDictGroup is not null)
+                AssignStatuses(csv); // Decided to do only stdDict status assignments within ProcessAgsFile. Ags file dict group status need assigning afterwards.
         }
 
         private void ProcessUnitRow(CsvReader csv)
         {
-            AssignProperties(csv, "Unit");
+            AssignProperties(csv, Descriptor.UNIT);
         }
 
         private void ProcessTypeRow(CsvReader csv)
         {
-            AssignProperties(csv, "Type");
+            AssignProperties(csv, Descriptor.TYPE);
         }
 
         private void ProcessDataRow(CsvReader csv)
@@ -111,32 +124,55 @@ namespace AgsVerifierLibrary.Actions
 
             for (int i = 0; i < csv.Parser.Record.Length; i++)
             {
-                var column = _currentGroup.Columns.FirstOrDefault(c => c.Index == i);
-                column.Data.Add(csv.Parser.Record[i]);
+                _currentGroup.GetColumn(i).Data.Add(csv.Parser.Record[i]);
             }
         }
 
-        private void AssignProperties(CsvReader csv, string agsField)
+        private void AssignProperties(CsvReader csv, Descriptor descriptor)
         {
             if (_currentGroup.Columns == null)
                 GenerateColumns(csv.Parser.Record.Length);
 
-            _groupType.GetProperty(agsField + "Row").SetValue(_currentGroup, csv.Parser.RawRow, null);
+            _currentGroup.SetGroupDescriptorRow(descriptor, csv.Parser.RawRow);
 
             for (int i = 0; i < csv.Parser.Record.Length; i++)
             {
-                var column = _currentGroup.Columns.FirstOrDefault(c => c.Index == i);
-                _columnType.GetProperty(agsField).SetValue(column, csv.Parser.Record[i], null);
+                _currentGroup.GetColumn(i).SetColumnDescriptor(descriptor, csv.Parser.Record[i]);
             }
+        }
+
+        private void AssignStatuses(CsvReader csv)
+        {
+            var row = csv.Parser.Record[1..];
+
+            for (int i = 0; i < row.Length; i++)
+            {
+                _currentGroup.GetColumn(row[i]).Status = ReturnStatus(row[i]);
+            }
+        }
+
+        private string ReturnStatus(string field)
+        {
+            int stdDictHeadingIndex = _stdDictGroup.GetColumn("DICT_HDNG").Data.IndexOf(field);
+
+            if (stdDictHeadingIndex > -1)
+                return _stdDictGroup.GetColumn("DICT_STAT").Data.ElementAt(stdDictHeadingIndex);
+
+            //  SEE call comment
+            //  int fileDictHeadingIndex = _currentGroup.Columns.FirstOrDefault(c => c.Heading == "DICT_HDNG").Data.IndexOf(field);
+            //  if (fileDictHeadingIndex > -1)
+            //      return _currentGroup.Columns.FirstOrDefault(c => c.Heading == "DICT_STAT").Data.ElementAt(fileDictHeadingIndex);
+
+            return string.Empty;
         }
 
         private void GenerateColumns(int length)
         {
-            _currentGroup.Columns = new List<AGSColumnModel>();
+            _currentGroup.Columns = new List<AgsColumnModel>();
 
             for (int i = 0; i < length; i++)
             {
-                AGSColumnModel agsColumn = new();
+                AgsColumnModel agsColumn = new();
                 agsColumn.Index = i;
                 _currentGroup.Columns.Add(agsColumn);
             }

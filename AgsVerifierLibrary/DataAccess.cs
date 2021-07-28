@@ -25,11 +25,18 @@ namespace AgsVerifierLibrary
 
         public void ParseAgsFile(string filePath) 
         {
-            ProcessAgsFile processAgsFile = new(filePath, _ruleErrors);
+            ProcessAgsFile processAgsFile = new(filePath, _ruleErrors, _stdDictionary);
             _agsGroups = processAgsFile.ReturnGroupModels(rowChecks: true);
             
             GroupBasedRules groupRules = new(_agsGroups, _stdDictionary, _ruleErrors);
             groupRules.CheckGroups();
+
+            _ruleErrors.Sort((a, b) => a.RuleId.CompareTo(b.RuleId));
+
+            foreach (var error in _ruleErrors)
+            {
+                System.Console.WriteLine($"{error.RuleId} - {error.Message}");
+            }
         }
     }
 }
