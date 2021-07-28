@@ -13,12 +13,6 @@ namespace AgsVerifierLibrary.Rules
     {
 		private static readonly Regex _regexAgsHeadingField = new(@"[^A-Z0-9_]", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 		private static readonly string[] _parentGroupExceptions = new string[] { "PROJ", "TRAN", "ABBR", "DICT", "UNIT", "TYPE", "LOCA", "FILE", "LBSG", "PREM", "STND" };
-		private static readonly Dictionary<string, string> _descriptors = new()
-		{
-			{ "HEADING", "HeadingRow"},
-			{ "UNIT", "UnitRow" },
-			{ "TYPE", "TypeRow" },
-		};
 
         private readonly List<AgsGroupModel> _groups;
         private readonly List<AgsGroupModel> _stdDictionary;
@@ -46,12 +40,13 @@ namespace AgsVerifierLibrary.Rules
 
 		public void CheckGroups()
 		{
-			Rule11a();
-			Rule11b();
-			Rule13();
-			Rule14();
-			Rule17(); // Reliant only on TYPE group
-			Rule18(); // Reliant only on DICT group
+			Rule11a(); // TRAN group
+			Rule11b(); // TRAN group
+			Rule13(); // PROJ group
+			Rule14(); // TRAN group
+			Rule15(); // UNIT group
+			Rule17(); // TYPE group
+			Rule18(); // DICT group
 
 			foreach (var group in _groups)
 			{
@@ -65,7 +60,6 @@ namespace AgsVerifierLibrary.Rules
 				Rule11(); // Covered by other rules
 				Rule11c(group);
 				Rule12(); // Covered by other rules
-				Rule15(group);
 				Rule16(group);
 				Rule16a(group);
 				Rule18a(group);
@@ -92,17 +86,18 @@ namespace AgsVerifierLibrary.Rules
 
 		private void Rule2b(AgsGroupModel group)
 		{
-			foreach (var key in _descriptors.Keys)
-            {
-				// Gets HEADING UNIT TYPE row integers using reflection checks if not 0
-				if ((int)typeof(AgsGroupModel).GetProperty(_descriptors[key]).GetValue(group) == 0)
+			List<string> descriptors = new() { "HEADING", "UNIT", "TYPE" };
+
+			foreach (var descriptor in descriptors)
+			{
+				if (group.GetGroupDescriptorRowNumber((Descriptor)Enum.Parse(typeof(Descriptor), descriptor)) == 0)
                 {
 					_errors.Add(new RuleErrorModel()
 					{
 						Status = "Fail",
 						RuleId = "2b",
 						Group = group.Name,
-						Message = $"{key} row missing from the {group.Name} group.",
+						Message = $"{descriptor} row missing from the {group.Name} group.",
 					});
 				}
             }
@@ -141,8 +136,8 @@ namespace AgsVerifierLibrary.Rules
 		{
 			// The order of data FIELDs in each line within a GROUP is defined at the start of each GROUP in the HEADING row.
 			// HEADINGs shall be in the order described in the AGS FORMAT DATA DICTIONARY.
-			var dictHeadings = _stdDictionary.GetGroup("DICT").DataFrame.FilterColumnToList("DICT_GRP", group.Name, "DICT_HDNG");
-			var groupHeadings = group.Columns.Select(c => c.Heading).ToList();
+			var dictHeadings = _stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", group.Name).AndBy("DICT_TYPE", Descriptor.HEADING.ToString()).ReturnAllValues("DICT_HDNG");
+			var groupHeadings = group.Columns.Select(c => c.Heading);
 
 			var intersectDictWithFile = dictHeadings.Intersect(groupHeadings).ToArray();
 			var intersectFileWithDict = groupHeadings.Intersect(dictHeadings).ToArray();
@@ -283,7 +278,7 @@ namespace AgsVerifierLibrary.Rules
 				});
 			}
 		}
-
+		//todo
 		private void Rule10c(AgsGroupModel group)
 		{
 			// Links are made between data rows in GROUPs by the KEY fields.
@@ -576,6 +571,18 @@ namespace AgsVerifierLibrary.Rules
 		{
 			AgsGroupModel tranGroup = _groups.GetGroup("TRAN");
 
+            if (tranGroup is null)
+            {
+				_errors.Add(new RuleErrorModel()
+				{
+					Status = "Fail",
+					RuleId = "14",
+					RowNumber = tranGroup.FirstDataRow,
+					Group = tranGroup.Name,
+					Message = "Each AGS data file shall contain the TRAN GROUP.",
+				});
+			}
+
 			if (tranGroup.DataFrame.Rows.Count == 1)
 				return;
 
@@ -597,25 +604,51 @@ namespace AgsVerifierLibrary.Rules
 				{
 					Status = "Fail",
 					RuleId = "14",
-					RowNumber = tranGroup.GroupRow,
+					RowNumber = tranGroup.FirstDataRow,
 					Group = tranGroup.Name,
 					Message = "There should not be more than one DATA row in the TRAN table.",
 				});
 			}
+		}
+
+		private void Rule15()
+		{
+			//  Each data file shall contain the UNIT GROUP to list all units used within the data file.
+			//  Every unit of measurement entered in the UNIT row of a GROUP or data entered in a FIELD where the field TYPE
+			//  is defined as "PU"(for example ELRG_RUNI, GCHM_UNIT or MOND_UNIT FIELDs) shall be listed and defined in the UNIT GROUP.
+
+			AgsGroupModel unitGroup = _groups.GetGroup("UNIT");
+
+			if (unitGroup is null)
+			{
+				_errors.Add(new RuleErrorModel()
+				{
+					Status = "Fail",
+					RuleId = "15",
+					Group = unitGroup.Name,
+					Message = "UNIT table not found.",
+				});
+			}
+
+			var allGroupUnits = _groups.ReturnAllUnits().Distinct();
+			var allPuTypeUnits = _groups.GetAllColumnsOfType(DataType.PU).MergeData().Distinct();
+			var mergedUnits = allGroupUnits.Concat(allPuTypeUnits);
+			
+			var unitUnits = unitGroup.GetColumn("UNIT_UNIT").Data;
+
+			var missingUnits = mergedUnits.Except(unitUnits);
+
+			if (missingUnits.Any() == false)
+				return;
 
 			_errors.Add(new RuleErrorModel()
 			{
 				Status = "Fail",
-				RuleId = "14",
-				RowNumber = tranGroup.FirstDataRow,
-				Group = tranGroup.Name,
-				Message = "Each AGS data file shall contain the TRAN GROUP.",
+				RuleId = "15",
+				RowNumber = unitGroup.GroupRow,
+				Group = unitGroup.Name,
+				Message = $"Unit(s) \"{string.Join('|', missingUnits)}\" not found in UNIT table.", 
 			});
-		}
-
-		private void Rule15(AgsGroupModel group)
-		{
-
 		}
 
 		private void Rule16(AgsGroupModel group)

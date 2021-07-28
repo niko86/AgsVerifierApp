@@ -10,8 +10,8 @@ namespace AgsVerifierLibrary.Actions
     {
         public static IEnumerable<string> MergedDictColumnByStatus(List<AgsGroupModel> stdDictionary, List<AgsGroupModel> groups, string status, string groupName, string columnName)
         {
-            var stdDictKeyHeadings = stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", groupName).Filter("DICT_STAT", status).ReturnAllValues(columnName);
-            var fileDictKeyHeadings = groups.GetGroup("DICT").GetRowsByFilter("DICT_GRP", groupName).Filter("DICT_STAT", status).ReturnAllValues(columnName);
+            var stdDictKeyHeadings = stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", groupName).AndBy("DICT_STAT", status).ReturnAllValues(columnName);
+            var fileDictKeyHeadings = groups.GetGroup("DICT").GetRowsByFilter("DICT_GRP", groupName).AndBy("DICT_STAT", status).ReturnAllValues(columnName);
             return stdDictKeyHeadings.Concat(fileDictKeyHeadings).Distinct();
         }
 

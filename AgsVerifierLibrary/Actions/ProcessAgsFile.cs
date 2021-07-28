@@ -90,7 +90,7 @@ namespace AgsVerifierLibrary.Actions
             if (_stdDictGroup is not null)
             {
                 // why not do at the end and combine the two dictionaries
-                agsGroup.ParentGroup = _stdDictGroup.GetRowsByFilter("DICT_GRP", csv.GetField(1)).Filter("DICT_TYPE", "GROUP").ReturnFirstValue("DICT_PGRP");
+                agsGroup.ParentGroup = _stdDictGroup.GetRowsByFilter("DICT_GRP", csv.GetField(1)).AndBy("DICT_TYPE", "GROUP").ReturnFirstValue("DICT_PGRP");
             }
 
             _agsGroups.Add(agsGroup);
@@ -133,7 +133,7 @@ namespace AgsVerifierLibrary.Actions
             if (_currentGroup.Columns == null)
                 GenerateColumns(csv.Parser.Record.Length);
 
-            _currentGroup.SetGroupDescriptorRow(descriptor, csv.Parser.RawRow);
+            _currentGroup.SetGroupDescriptorRowNumber(descriptor, csv.Parser.RawRow);
 
             for (int i = 0; i < csv.Parser.Record.Length; i++)
             {

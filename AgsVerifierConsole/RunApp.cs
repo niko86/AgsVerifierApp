@@ -10,7 +10,7 @@ namespace AgsVerifierConsole
 		{
 			_dataAccess = new DataAccess();
 
-			string filePath = @"C:\Users\i.nicholson.fugro-global\Desktop\csharp-test\rule11-3.ags";
+			string filePath = @"C:\Users\i.nicholson.fugro-global\Desktop\csharp-test\ags example.ags";
 			string dictPath = @"C:\Users\i.nicholson.fugro-global\Desktop\csharp-test\Standard_dictionary_v4_1_0.ags";
 
 

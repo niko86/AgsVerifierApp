@@ -12,12 +12,12 @@ namespace AgsVerifierLibrary.Extensions
         private static readonly PropertyInfo[] _groupProperties = typeof(AgsGroupModel).GetProperties();
         private static readonly PropertyInfo[] _columnProperties = typeof(AgsColumnModel).GetProperties();
 
-        public static void SetGroupDescriptorRow(this AgsGroupModel column, Descriptor descriptor, int value)
+        public static void SetGroupDescriptorRowNumber(this AgsGroupModel group, Descriptor descriptor, int value)
         {
             _groupProperties
                 .FirstOrDefault(p => p.Name
                     .Contains(descriptor.ToString() + "Row", StringComparison.InvariantCultureIgnoreCase))
-                .SetValue(column, value, null);
+                .SetValue(group, value, null);
         }
 
         public static void SetColumnDescriptor(this AgsColumnModel column, Descriptor descriptor, string value)
@@ -26,6 +26,14 @@ namespace AgsVerifierLibrary.Extensions
                 .FirstOrDefault(p => p.Name
                     .Contains(descriptor.ToString(), StringComparison.InvariantCultureIgnoreCase))
                 .SetValue(column, value, null);
+        }
+
+        public static int GetGroupDescriptorRowNumber(this AgsGroupModel group, Descriptor descriptor)
+        {
+            return (int) _groupProperties
+                .FirstOrDefault(p => p.Name
+                    .Contains(descriptor.ToString() + "Row", StringComparison.InvariantCultureIgnoreCase))
+                .GetValue(group);
         }
 
         public static AgsGroupModel GetGroup(this List<AgsGroupModel> groups, string groupName)
@@ -38,6 +46,40 @@ namespace AgsVerifierLibrary.Extensions
             return groups.Select(c => c.Name);
         }
 
+        public static IEnumerable<string> ReturnAllHeadings(this List<AgsGroupModel> groups)
+        {
+            string[] exclusion = new string[] { Descriptor.HEADING.ToString(), string.Empty, null };
+            return groups.SelectMany(g => g.Columns.Where(c => !exclusion.Contains(c.Unit)).Select(x => x.Unit));
+        }
+
+        public static IEnumerable<string> ReturnAllUnits(this List<AgsGroupModel> groups)
+        {
+            string[] exclusion = new string[] { Descriptor.UNIT.ToString(), string.Empty, null };
+            return groups.SelectMany(g => g.Columns.Where(c => !exclusion.Contains(c.Unit)).Select(x => x.Unit));
+        }
+
+        public static IEnumerable<string> ReturnAllTypes(this List<AgsGroupModel> groups)
+        {
+            string[] exclusion = new string[] { Descriptor.TYPE.ToString(), string.Empty, null };
+            return groups.SelectMany(g => g.Columns.Where(c => !exclusion.Contains(c.Unit)).Select(x => x.Unit));
+        }
+
+        public static IEnumerable<AgsColumnModel> GetAllColumnsOfType(this List<AgsGroupModel> groups, DataType dataType)
+        {
+            return groups.SelectMany(g => g.Columns.Where(c => c.Type == dataType.ToString()));
+        }
+
+        public static IEnumerable<AgsColumnModel> GetColumnsOfType(this AgsGroupModel group, DataType dataType)
+        {
+            return group.Columns.Where(c => c.Type == dataType.ToString());
+        }
+
+        public static IEnumerable<string> MergeData(this IEnumerable<AgsColumnModel> columns)
+        {
+            string[] exclusion = new string[] { string.Empty, null };
+            return columns.SelectMany(c => c.Data.Where(x => !exclusion.Contains(x))); //SelectMany(i => i.Data);
+        }
+
         public static AgsColumnModel GetColumn(this AgsGroupModel group, string headingName)
         {
             return group?.Columns.FirstOrDefault(c => c.Heading == headingName);
@@ -47,7 +89,7 @@ namespace AgsVerifierLibrary.Extensions
         {
             return group.Columns.FirstOrDefault(c => c.Index == index);
         }
-
+        
         public static IEnumerable<string> ReturnDescriptor(this IEnumerable<AgsColumnModel> columns, Descriptor descriptor)
         {
             PropertyInfo propertyInfo = _columnProperties
@@ -118,7 +160,7 @@ namespace AgsVerifierLibrary.Extensions
             }
         }
 
-        public static IEnumerable<Dictionary<string, string>> Filter(this IEnumerable<Dictionary<string, string>> dict, string key, string filterText)
+        public static IEnumerable<Dictionary<string, string>> AndBy(this IEnumerable<Dictionary<string, string>> dict, string key, string filterText)
         {
             return dict?
                 .Where(d => d
