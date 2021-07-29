@@ -3,6 +3,7 @@ using AgsVerifierLibrary.Extensions;
 using AgsVerifierLibrary.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using static AgsVerifierLibrary.Models.AgsEnum;
@@ -17,36 +18,31 @@ namespace AgsVerifierLibrary.Rules
         private readonly List<AgsGroupModel> _groups;
         private readonly List<AgsGroupModel> _stdDictionary;
         private readonly List<RuleErrorModel> _errors;
-        private readonly List<string> _stdDictHeadings;
-        private readonly List<string> _agsDictHeadings;
-        private readonly List<string> _allDictHeadings;
-        private readonly List<string> _agsTypeTypes;
+        private readonly string _filePath;
 
-        public GroupBasedRules(List<AgsGroupModel> groups, List<AgsGroupModel> stdDictionary, List<RuleErrorModel> errors)
+        public GroupBasedRules(List<AgsGroupModel> groups, List<AgsGroupModel> stdDictionary, List<RuleErrorModel> errors, string filePath)
         {
 			_groups = groups;
             _stdDictionary = stdDictionary;
             _errors = errors;
-
-			// TODO clean up this private field setting as agsdict causes cascading errors
-			_stdDictHeadings = stdDictionary.GetGroup("DICT")?.GetColumn("DICT_HDNG").Data;
-			_agsDictHeadings = groups.GetGroup("DICT")?.GetColumn("DICT_HDNG")?.Data;
-
-			_allDictHeadings = (_stdDictHeadings ?? Enumerable.Empty<string>()).Concat(_agsDictHeadings 
-				?? Enumerable.Empty<string>()).Distinct().ToList();
-
-			_agsTypeTypes = groups.GetGroup("TYPE").GetColumn("TYPE_TYPE").Data;
-		}
+            _filePath = filePath;
+        }
 
 		public void CheckGroups()
 		{
+			Rule11(); // Covered by other rules
+			Rule12(); // Covered by other rules
+
 			Rule11a(); // TRAN group
 			Rule11b(); // TRAN group
 			Rule13(); // PROJ group
 			Rule14(); // TRAN group
 			Rule15(); // UNIT group
+			Rule16(); // ABBR group
+			Rule16a(); // ABBR+TRAN group
 			Rule17(); // TYPE group
 			Rule18(); // DICT group
+			Rule20(); // FILE group
 
 			foreach (var group in _groups)
 			{
@@ -57,22 +53,17 @@ namespace AgsVerifierLibrary.Rules
 				Rule10a(group);
 				Rule10b(group);
 				Rule10c(group);
-				Rule11(); // Covered by other rules
 				Rule11c(group);
-				Rule12(); // Covered by other rules
-				Rule16(group);
-				Rule16a(group);
 				Rule18a(group);
 				Rule19(group);
 				Rule19a(group);
-				Rule19b(group);
-				Rule20(group);
+				Rule19b(group); 
 			}
 		}
 
 		private void Rule2(AgsGroupModel group)
 		{
-            if (group.GetColumn("HEADING").Data.Count > 0)
+            if (group.GetColumn("HEADING").Data.Any())
 				return;
 
 			_errors.Add(new RuleErrorModel()
@@ -136,7 +127,7 @@ namespace AgsVerifierLibrary.Rules
 		{
 			// The order of data FIELDs in each line within a GROUP is defined at the start of each GROUP in the HEADING row.
 			// HEADINGs shall be in the order described in the AGS FORMAT DATA DICTIONARY.
-			var dictHeadings = _stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", group.Name).AndBy("DICT_TYPE", Descriptor.HEADING.ToString()).ReturnAllValues("DICT_HDNG");
+			var dictHeadings = _stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", group.Name).AndBy("DICT_TYPE", Descriptor.HEADING.ToString()).ReturnAllValuesOf("DICT_HDNG");
 			var groupHeadings = group.Columns.Select(c => c.Heading);
 
 			var intersectDictWithFile = dictHeadings.Intersect(groupHeadings).ToArray();
@@ -164,14 +155,35 @@ namespace AgsVerifierLibrary.Rules
 
 		private void Rule9(AgsGroupModel group)
 		{
-			if (_agsDictHeadings is null)
-				return;
+			// Data HEADING and GROUP names shall be taken from the AGS FORMAT DATA DICTIONARY. In cases where there is no suitable entry,
+			// a user-defined GROUP and/or HEADING may be used in accordance with Rule 18. Any user-defined HEADINGs shall be included at
+			// the end of the HEADING row after the standard HEADINGs in the order defined in the DICT group (see Rule 18a).
 
-			var dictHeadings = _groups.GetGroup("DICT").DataFrame.FilterColumnToList("DICT_GRP", group.Name, "DICT_HDNG");
+			var stdDictTableFilteredByGroup = _stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", group.Name);
+
+			var fileDictTableFilteredByGroup = _groups.GetGroup("DICT").GetRowsByFilter("DICT_GRP", group.Name);
+
+            if (stdDictTableFilteredByGroup is null && fileDictTableFilteredByGroup is null)
+            {
+				_errors.Add(new RuleErrorModel()
+				{
+					Status = "Fail",
+					RuleId = "9",
+					Group = group.Name,
+					RowNumber = group.HeadingRow,
+					Message = $"GROUP name not defined within either the AGS FORMAT DATA DICTIONARY or DICT table.",
+				});
+				return;
+			}
+
+			var stdDictTableHeadingRows = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).ReturnAllValuesOf("DICT_HDNG");
+			var fileDictTableHeadingRows = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).ReturnAllValuesOf("DICT_HDNG");
+			var combinedDictTableHeadingRows = stdDictTableHeadingRows.Concat(fileDictTableHeadingRows).Distinct();
+
 			var groupHeadings = group.Columns.Select(c => c.Heading).ToList();
 
-			var intersectDictWithFile = dictHeadings.Intersect(groupHeadings).ToArray();
-			var intersectFileWithDict = groupHeadings.Intersect(dictHeadings).ToArray();
+			var intersectDictWithFile = combinedDictTableHeadingRows.Intersect(groupHeadings).ToArray();
+			var intersectFileWithDict = groupHeadings.Intersect(combinedDictTableHeadingRows).ToArray();
 
 			if (intersectDictWithFile.SequenceEqual(intersectFileWithDict))
 				return;
@@ -284,9 +296,6 @@ namespace AgsVerifierLibrary.Rules
 			// Links are made between data rows in GROUPs by the KEY fields.
 			// Every entry made in the KEY fields in any GROUP must have an equivalent entry in its PARENT GROUP.
 			// The PARENT GROUP must be included within the data file.
-
-			if (_agsDictHeadings is null)
-				return;
 
 			if (_parentGroupExceptions.Contains(group.Name))
 				return;
@@ -631,8 +640,8 @@ namespace AgsVerifierLibrary.Rules
 			}
 
 			var allGroupUnits = _groups.ReturnAllUnits().Distinct();
-			var allPuTypeUnits = _groups.GetAllColumnsOfType(DataType.PU).MergeData().Distinct();
-			var mergedUnits = allGroupUnits.Concat(allPuTypeUnits);
+			var allPuTypeColumnData = _groups.GetAllColumnsOfType(DataType.PU).MergeData().Distinct();
+			var mergedUnits = allGroupUnits.Concat(allPuTypeColumnData);
 			
 			var unitUnits = unitGroup.GetColumn("UNIT_UNIT").Data;
 
@@ -650,16 +659,73 @@ namespace AgsVerifierLibrary.Rules
 				Message = $"Unit(s) \"{string.Join('|', missingUnits)}\" not found in UNIT table.", 
 			});
 		}
-
-		private void Rule16(AgsGroupModel group)
+		// TODO
+		private void Rule16()
 		{
+			//  Each data file shall contain the ABBR GROUP when abbreviations have been included in the data file.
+			//  The abbreviations listed in the ABBR GROUP shall include definitions for all abbreviations entered
+			//  in a FIELD where the data TYPE is defined as "PA" or any abbreviation needing definition used within
+			//  any other heading data type.
 
+			var allPaTypeColumns = _groups.GetAllColumnsOfType(DataType.PA);
+
+			if (allPaTypeColumns is null)
+				return;
+
+			AgsGroupModel abbrGroup = _groups.GetGroup("ABBR");
+
+            if (abbrGroup is null)
+            {
+				_errors.Add(new RuleErrorModel()
+				{
+					Status = "Fail",
+					RuleId = "16",
+					Group = "ABBR",
+					Message = $"PA field abbreviations identified, however ABBR table not found.",
+				});
+			}
+
+			var abbrCodes = abbrGroup.GetColumn("ABBR_CODE").Data.Distinct().ToList();
+
+			// TODO fix the loop
+            foreach (var paTypeColumn in allPaTypeColumns)
+            {
+				for (int i = 0; i < abbrCodes.Count; i++)
+				{
+					if (paTypeColumn.Data.Distinct().Contains(abbrCodes[i]) == false)
+					{
+						_errors.Add(new RuleErrorModel()
+						{
+							Status = "Fail",
+							RuleId = "16",
+							Group = "ABBR",
+							RowNumber = abbrGroup.FirstDataRow + i,
+							Message = $"\"{abbrCodes[i]}\" under {paTypeColumn.Heading} in {paTypeColumn.Group} not found in ABBR table",
+						});
+					}
+				}
+			}
 		}
 
-		private void Rule16a(AgsGroupModel group)
+		private void Rule16a()
         {
+			//  Where multiple abbreviations are required to fully codify a FIELD, the abbreviations shall be separated by a defined
+			//  concatenation character. This single concatenation character shall be defined in TRAN_RCON. The default being "+"
+			//  (ASCII character 43). Each abbreviation used in such combinations shall be listed separately in the ABBR GROUP.
+			//  e.g. "CP+RC" must have entries for both "CP" and "RC" in ABBR GROUP, together with their full definition.
 
-        }
+			var raisedErrorIds = _errors.Select(e => e.RuleId);
+
+			if (raisedErrorIds.Contains("14"))
+				return; // No TRAN table no way to concatenator. Or would
+
+			AgsGroupModel tranGroup = _groups.GetGroup("TRAN");
+
+
+			AgsColumnModel tranRconColumn = tranGroup.GetColumn("TRAN_RCON");
+
+
+		}
 
 		private void Rule17()
 		{
@@ -683,7 +749,7 @@ namespace AgsVerifierLibrary.Rules
 
             foreach (var typeColumn in typeColumns)
             {
-				if (_agsTypeTypes.Contains(typeColumn) || typeColumn == "TYPE")
+				if (_groups.GetGroup("TYPE").GetColumn("TYPE_TYPE").Data.Contains(typeColumn) || typeColumn == "TYPE")
 					continue;
 
 				_errors.Add(new RuleErrorModel()
@@ -698,7 +764,7 @@ namespace AgsVerifierLibrary.Rules
 
 		private void Rule18()
 		{
-			if (_agsDictHeadings is null)
+			if (_groups.GetGroup("DICT") is null)
 			{
 				_errors.Add(new RuleErrorModel()
 				{
@@ -709,15 +775,13 @@ namespace AgsVerifierLibrary.Rules
 				});
 			}
 		}
-
+		//TODO
 		private void Rule18a(AgsGroupModel group)
         {
 			// MODIFIED FROM RULE 7
 			// The order in which the user - defined HEADINGs are listed in the DICT GROUP shall define the order in which these HEADINGS
 			// are appended to an existing GROUP or appear in a user-defined GROUP.
 			// This order also defines the sequence in which such HEADINGS are used in a heading of data TYPE 'Record Link'(Rule 11).
-			if (_agsDictHeadings is null)
-				return;
 
 			var dictHeadings = _groups.GetGroup("DICT").DataFrame.FilterColumnToList("DICT_GRP", group.Name, "DICT_HDNG");
 			var groupHeadings = group.Columns.Select(c => c.Heading).ToList();
@@ -810,10 +874,10 @@ namespace AgsVerifierLibrary.Rules
 			}
 			);
 		}
-
+		// TODO
 		private void Rule19b(AgsGroupModel group)
 		{
-			// TODO
+			
 			//elif heading not in ref_headings_list_1 and heading in ref_headings_list_2:
 			//msg = f'Definition for {heading} not found under group {ref_group_name}. Either rename heading or add definition under correct group.'
 			//		line_number = line_numbers[group]['HEADING']
@@ -855,7 +919,12 @@ namespace AgsVerifierLibrary.Rules
 						});
 				}
 
-				if (_allDictHeadings.Any(s => s.Contains(heading)) == false)
+				var stdDictHeadings = _stdDictionary.GetGroup("DICT")?.GetColumn("DICT_HDNG").Data;
+				var agsDictHeadings = _groups.GetGroup("DICT")?.GetColumn("DICT_HDNG")?.Data;
+
+				var allDictHeadings = (stdDictHeadings ?? Enumerable.Empty<string>()).Concat(agsDictHeadings?? Enumerable.Empty<string>()).Distinct();
+
+				if (allDictHeadings.Any(s => s.Contains(heading)) == false)
 				{
 					_errors.Add(
 						new RuleErrorModel()
@@ -868,15 +937,97 @@ namespace AgsVerifierLibrary.Rules
 							Message = $"Group name {splitHeading[0]} of heading {heading} not present in the standard or AGS file data dictionaries.",
 						});
 				}
-
 			}
-
-
 		}
 
-		private void Rule20(AgsGroupModel group)
+		private void Rule20()
 		{
+			// Additional computer files (e.g. digital images) can be included within a data submission. Each such file shall be defined in a FILE GROUP.
+			// The additional files shall be transferred in a sub-folder named FILE. This FILE sub - folder shall contain additional sub-folders each
+			// named by the FILE_FSET reference. Each FILE_FSET named folder will contain the files listed in the FILE GROUP.
 
+			AgsGroupModel fileGroup = _groups.GetGroup("FILE");
+
+			var fSetColumns = _groups.GetAllColumnsOfHeading("FILE_FSET", "FILE");
+
+            if (fileGroup is null && fSetColumns.Any())
+            {
+				_errors.Add(new RuleErrorModel()
+				{
+					Status = "Fail",
+					RuleId = "20",
+					Group = "FILE",
+					Message = $"FILE table not found even though there are FILE_FSET entries in other tables.",
+				});
+			}
+
+            foreach (var fSetColumn in fSetColumns)
+            {
+                for (int i = 0; i < fSetColumn.Data.Count; i++)
+                {
+					if (string.IsNullOrWhiteSpace(fSetColumn.Data[i]))
+						continue;
+
+					var fileGroupFSetEntries = fileGroup.GetColumn("FILE_FSET").Data;
+
+					if (fileGroupFSetEntries.Contains(fSetColumn.Data[i]))
+						continue;
+
+					_errors.Add(new RuleErrorModel()
+					{
+						Status = "Fail",
+						RuleId = "20",
+						Group = fSetColumn.Group,
+						RowNumber = _groups.GetGroup(fSetColumn.Group).FirstDataRow + i,
+						Message = $"FILE_FSET entry \"{fSetColumn.Data[i]}\" not found in FILE table.",
+					});
+				}
+            }
+
+			string baseDir = Path.GetDirectoryName(_filePath);
+			string fileFolderPath = Path.Combine(baseDir, "FILE");
+
+			if (Directory.Exists(Path.Combine(baseDir, "FILE")) == false)
+            {
+				_errors.Add(new RuleErrorModel()
+				{
+					Status = "Fail",
+					RuleId = "20",
+					Group = "FILE",
+					Message = $"Folder named \"FILE\" not found. Files defined in the FILE table should be saved in this folder.",
+				});
+				return;
+			}
+
+			var fileGroupFolderNames = fileGroup.GetColumn("FILE_FSET").ReturnDataDistinctNonBlank();
+			var subFolders = Directory.GetDirectories(fileFolderPath).Select(i => Path.GetFileName(i));
+
+			fileGroupFolderNames.Except(subFolders).ToList().ForEach(missingSubFolder =>
+			{
+				_errors.Add(new RuleErrorModel()
+				{
+					Status = "Fail",
+					RuleId = "20",
+					Group = "FILE",
+					Message = $"Sub-folder named \"{Path.Combine("FILE", missingSubFolder)}\" not found even though it is defined in the FILE table.",
+				});
+			});
+
+			var fileGroupFileNames = fileGroup.GetColumn("FILE_NAME").ReturnDataDistinctNonBlank();
+			var subFolderFiles = Directory.GetDirectories(fileFolderPath).SelectMany(d => Directory.GetFiles(d).Select(f => Path.GetFileName(f)));
+			var refDict = fileGroup.GetRows();
+
+			fileGroupFileNames.Except(subFolderFiles).ToList().ForEach(missingSubFile =>
+			{
+				var temp = refDict.AndBy("FILE_NAME", missingSubFile).ReturnFirstValueOf("FILE_FSET");
+				_errors.Add(new RuleErrorModel()
+				{
+					Status = "Fail",
+					RuleId = "20",
+					Group = "FILE",
+					Message = $"File named \"{Path.Combine("FILE", temp, missingSubFile)}\" not found even though it is defined in the FILE table.",
+				});
+			});
 		}
 	}
 }

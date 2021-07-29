@@ -10,5 +10,6 @@ namespace AgsVerifierLibrary.Models
 		public string Unit { get; set; }
 		public List<string> Data { get; set; } = new();
 		public string Status { get; set; }
+		public string Group { get; set; }
 	}
 }

@@ -28,6 +28,11 @@ namespace AgsVerifierLibrary.Extensions
                 .SetValue(column, value, null);
         }
 
+        public static IEnumerable<string> ReturnDataDistinctNonBlank(this AgsColumnModel column)
+        {
+            return column.Data.Where(i => string.IsNullOrWhiteSpace(i) == false).Distinct();
+        }
+
         public static int GetGroupDescriptorRowNumber(this AgsGroupModel group, Descriptor descriptor)
         {
             return (int) _groupProperties
@@ -67,6 +72,16 @@ namespace AgsVerifierLibrary.Extensions
         public static IEnumerable<AgsColumnModel> GetAllColumnsOfType(this List<AgsGroupModel> groups, DataType dataType)
         {
             return groups.SelectMany(g => g.Columns.Where(c => c.Type == dataType.ToString()));
+        }
+
+        public static IEnumerable<AgsColumnModel> GetAllColumnsOfHeading(this List<AgsGroupModel> groups, string headingName)
+        {
+            return groups.SelectMany(g => g.Columns.Where(c => c.Heading == headingName));
+        }
+
+        public static IEnumerable<AgsColumnModel> GetAllColumnsOfHeading(this List<AgsGroupModel> groups, string headingName, string excludingGroup)
+        {
+            return groups.SelectMany(g => g.Columns.Where(c => c.Group != excludingGroup && c.Heading == headingName));
         }
 
         public static IEnumerable<AgsColumnModel> GetColumnsOfType(this AgsGroupModel group, DataType dataType)
@@ -127,6 +142,16 @@ namespace AgsVerifierLibrary.Extensions
             return output;
         }
 
+        public static IEnumerable<Dictionary<string, string>> GetRows(this AgsGroupModel group)
+        {
+            var column = group.GetColumn(0);
+
+            for (int i = 0; i < column.Data.Count; i++)
+            {
+                yield return SingleRow(group, i);
+            }
+        }
+
         public static IEnumerable<Dictionary<string, string>> GetRowsByFilter(this AgsGroupModel group, string headingName, string filterText)
         {
             var column = group.GetColumn(headingName);
@@ -168,17 +193,33 @@ namespace AgsVerifierLibrary.Extensions
                     .Contains(filterText, StringComparison.InvariantCultureIgnoreCase));
         }
 
-        public static string ReturnFirstValue(this IEnumerable<Dictionary<string, string>> dict, string key)
+        public static IEnumerable<Dictionary<string, string>> AndBy(this IEnumerable<Dictionary<string, string>> dict, string key, Descriptor filterText)
+        {
+            return dict?
+                .Where(d => d
+                    .GetValueOrDefault(key)
+                    .Contains(filterText.ToString(), StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        public static IEnumerable<Dictionary<string, string>> AndBy(this IEnumerable<Dictionary<string, string>> dict, string key, DataType filterText)
+        {
+            return dict?
+                .Where(d => d
+                    .GetValueOrDefault(key)
+                    .Contains(filterText.ToString(), StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        public static string ReturnFirstValueOf(this IEnumerable<Dictionary<string, string>> dict, string key)
         {
             return dict?.FirstOrDefault()?.GetValueOrDefault(key) ?? string.Empty;
         }
 
-        public static string ReturnValueByIndex(this IEnumerable<Dictionary<string, string>> dict, string key, int index)
+        public static string ReturnValueOfByIndex(this IEnumerable<Dictionary<string, string>> dict, string key, int index)
         {
             return dict?.ElementAtOrDefault(index)?.GetValueOrDefault(key) ?? string.Empty;
         }
 
-        public static IEnumerable<string> ReturnAllValues(this IEnumerable<Dictionary<string, string>> dict, string key)
+        public static IEnumerable<string> ReturnAllValuesOf(this IEnumerable<Dictionary<string, string>> dict, string key)
         {
             return dict?.Select(d => d.GetValueOrDefault(key));
         }

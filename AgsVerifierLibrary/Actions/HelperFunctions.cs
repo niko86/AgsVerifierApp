@@ -10,8 +10,8 @@ namespace AgsVerifierLibrary.Actions
     {
         public static IEnumerable<string> MergedDictColumnByStatus(List<AgsGroupModel> stdDictionary, List<AgsGroupModel> groups, string status, string groupName, string columnName)
         {
-            var stdDictKeyHeadings = stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", groupName).AndBy("DICT_STAT", status).ReturnAllValues(columnName);
-            var fileDictKeyHeadings = groups.GetGroup("DICT").GetRowsByFilter("DICT_GRP", groupName).AndBy("DICT_STAT", status).ReturnAllValues(columnName);
+            var stdDictKeyHeadings = stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", groupName).AndBy("DICT_STAT", status).ReturnAllValuesOf(columnName);
+            var fileDictKeyHeadings = groups.GetGroup("DICT").GetRowsByFilter("DICT_GRP", groupName).AndBy("DICT_STAT", status).ReturnAllValuesOf(columnName);
             return stdDictKeyHeadings.Concat(fileDictKeyHeadings).Distinct();
         }
 
@@ -39,8 +39,6 @@ namespace AgsVerifierLibrary.Actions
                 string linkedGroupName = recordLink.Split(delimiter).First();
 
                 var linkedGroupKeyRows = GetLinkedGroupKeyRows(groups, linkedGroupName, delimiter);
-
-
             }
         }
     }
