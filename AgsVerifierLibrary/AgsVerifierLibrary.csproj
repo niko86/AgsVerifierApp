@@ -10,8 +10,4 @@
     <PackageReference Include="Microsoft.Data.Analysis" Version="0.18.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Stores\" />
-  </ItemGroup>
-
 </Project>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -22,7 +23,9 @@ namespace AgsVerifierLibrary.Models
         {
             KEY = 0,
             REQUIRED = 1,
-            OTHER = 2,
+            [Display(Name = "KEY+REQUIRED")]
+            KEYPLUSREQUIRED = 2,
+            OTHER = 3,
         }
 
         public enum DataType
