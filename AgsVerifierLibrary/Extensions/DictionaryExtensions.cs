@@ -22,7 +22,7 @@ namespace AgsVerifierLibrary.Extensions
             return dict?
                 .Where(d => d
                     .GetValueOrDefault(key)
-                    .Contains(filterText.ToString(), StringComparison.InvariantCultureIgnoreCase));
+                    .Contains(filterText.Name(), StringComparison.InvariantCultureIgnoreCase));
         }
 
         public static IEnumerable<Dictionary<string, string>> AndBy(this IEnumerable<Dictionary<string, string>> dict, string key, DataType filterText)
@@ -30,7 +30,15 @@ namespace AgsVerifierLibrary.Extensions
             return dict?
                 .Where(d => d
                     .GetValueOrDefault(key)
-                    .Contains(filterText.ToString(), StringComparison.InvariantCultureIgnoreCase));
+                    .Contains(filterText.Name(), StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        public static IEnumerable<Dictionary<string, string>> AndBy(this IEnumerable<Dictionary<string, string>> dict, string key, Status filterText)
+        {
+            return dict?
+                .Where(d => d
+                    .GetValueOrDefault(key)
+                    .Contains(filterText.Name(), StringComparison.InvariantCultureIgnoreCase));
         }
 
         public static string ReturnFirstValueOf(this IEnumerable<Dictionary<string, string>> dict, string key)

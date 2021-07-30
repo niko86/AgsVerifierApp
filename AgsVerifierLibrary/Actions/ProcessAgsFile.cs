@@ -122,9 +122,17 @@ namespace AgsVerifierLibrary.Actions
             if (_currentGroup.FirstDataRow == 0)
                 _currentGroup.FirstDataRow = csv.Parser.RawRow;
 
-            for (int i = 0; i < csv.Parser.Record.Length; i++)
+            for (int i = 0; i < _currentGroup.Columns.Count; i++)
             {
-                _currentGroup.GetColumn(i).Data.Add(csv.Parser.Record[i]);
+                try
+                {
+                    _currentGroup.GetColumn(i).Data.Add(csv.Parser.Record[i]);
+                }
+                catch (Exception)
+                {
+                    // TODO add error
+                    _currentGroup.GetColumn(i).Data.Add(string.Empty);
+                }
             }
         }
 
@@ -135,9 +143,17 @@ namespace AgsVerifierLibrary.Actions
 
             _currentGroup.SetGroupDescriptorRowNumber(descriptor, csv.Parser.RawRow);
 
-            for (int i = 0; i < csv.Parser.Record.Length; i++)
+            for (int i = 0; i < _currentGroup.Columns.Count; i++)
             {
-                _currentGroup.GetColumn(i).SetColumnDescriptor(descriptor, csv.Parser.Record[i]);
+                try
+                {
+                    _currentGroup.GetColumn(i).SetColumnDescriptor(descriptor, csv.Parser.Record[i]);
+                }
+                catch (IndexOutOfRangeException)
+                {
+                    // TODO add error
+                    _currentGroup.GetColumn(i).SetColumnDescriptor(descriptor, string.Empty);
+                }
             }
         }
 
@@ -153,15 +169,11 @@ namespace AgsVerifierLibrary.Actions
 
         private string ReturnStatus(string field)
         {
+            // TODO check current dictionary in file at end.
             int stdDictHeadingIndex = _stdDictGroup.GetColumn("DICT_HDNG").Data.IndexOf(field);
 
             if (stdDictHeadingIndex > -1)
                 return _stdDictGroup.GetColumn("DICT_STAT").Data.ElementAt(stdDictHeadingIndex);
-
-            //  SEE call comment
-            //  int fileDictHeadingIndex = _currentGroup.Columns.FirstOrDefault(c => c.Heading == "DICT_HDNG").Data.IndexOf(field);
-            //  if (fileDictHeadingIndex > -1)
-            //      return _currentGroup.Columns.FirstOrDefault(c => c.Heading == "DICT_STAT").Data.ElementAt(fileDictHeadingIndex);
 
             return string.Empty;
         }

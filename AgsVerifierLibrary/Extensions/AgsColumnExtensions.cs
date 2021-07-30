@@ -78,5 +78,41 @@ namespace AgsVerifierLibrary.Extensions
                 }
             }
         }
+
+        private static Dictionary<string, string> SingleRow(this IEnumerable<AgsColumnModel> columns, int rowIndex)
+        {
+            Dictionary<string, string> output = new();
+
+            foreach (var column in columns)
+            {
+                AddField(output, column, rowIndex);
+            }
+
+            return output;
+        }
+
+        public static IEnumerable<Dictionary<string, string>> GetRows(this IEnumerable<AgsColumnModel> columns)
+        {
+            for (int i = 0; i < columns.First().Data.Count; i++)
+            {
+                yield return SingleRow(columns, i);
+            }
+        }
+
+        public static IEnumerable<Dictionary<string, string>> GetRowsByFilter(this IEnumerable<AgsColumnModel> columns, string headingName, string filterText)
+        {
+            var column = columns.FirstOrDefault(c => c.Heading == headingName);
+
+            for (int i = 0; i < column.Data.Count; i++)
+            {
+                if (column.Data[i] == filterText)
+                    yield return SingleRow(columns, i);
+            }
+        }
+
+        private static void AddField(Dictionary<string, string> dict, AgsColumnModel agsColumn, int rowIndex)
+        {
+            dict.Add(agsColumn.Heading, agsColumn.Data[rowIndex]);
+        }
     }
 }

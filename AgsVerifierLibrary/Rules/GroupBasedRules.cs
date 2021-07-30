@@ -297,7 +297,7 @@ namespace AgsVerifierLibrary.Rules
             // The PARENT GROUP must be included within the data file.
 
             if (_parentGroupExceptions.Contains(group.Name))
-                return;
+                return; 
 
             string parentGroupName = group.ParentGroup;
 
@@ -325,7 +325,7 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            var parentDictKeyHeadings = HelperFunctions.MergedDictColumnByStatus(_stdDictionary, _groups, "key", group.Name, "DICT_HDNG");
+            var parentDictKeyHeadings = HelperFunctions.MergedDictColumnByStatus(_stdDictionary, _groups, Status.KEY, group.Name, "DICT_HDNG");
 
             if (parentDictKeyHeadings.Any() == false)
             {
@@ -339,7 +339,9 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            var childDictKeyHeadings = HelperFunctions.MergedDictColumnByStatus(_stdDictionary, _groups, "key", group.Name, "DICT_HDNG");
+            var childDictKeyHeadings = HelperFunctions.MergedDictColumnByStatus(_stdDictionary, _groups, Status.KEY, group.Name, "DICT_HDNG");
+
+            var test = group.GetColumnsOfStatus(Status.KEY); //.GetRows().First().ToString();
 
             foreach (var childKeyHeading in childDictKeyHeadings)
             {
@@ -524,7 +526,6 @@ namespace AgsVerifierLibrary.Rules
                             continue;
                         }
 
-                        // IF here can check for if linked GROUP exists and check if same number of entries are groups key fields
                         var splitRecordLink = recordLinks[i].Split(delimiter);
                         AgsGroupModel linkedGroup = _groups.GetGroup(splitRecordLink[0]);
 
@@ -573,7 +574,8 @@ namespace AgsVerifierLibrary.Rules
 
         private void Rule12()
         {
-
+            // Data does not have to be included against each HEADING unless REQUIRED(Rule 10b). The data FIELD can be null;
+            // a null entry is defined as ""(two quotes together).
         }
 
         private void Rule13()
