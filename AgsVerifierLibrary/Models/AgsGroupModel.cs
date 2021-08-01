@@ -16,5 +16,11 @@ namespace AgsVerifierLibrary.Models
 		public string ParentGroup { get; set; }
 		public List<AgsColumnModel> Columns { get; set; }
 		public DataFrame DataFrame { get; set; }
+
+		public AgsColumnModel this[int rowIndex]
+		{
+			get => Columns[rowIndex];
+			set => Columns[rowIndex] = value;
+		}
 	}
 }
