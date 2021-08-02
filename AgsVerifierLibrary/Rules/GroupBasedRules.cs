@@ -162,10 +162,12 @@ namespace AgsVerifierLibrary.Rules
             // the end of the HEADING row after the standard HEADINGs in the order defined in the DICT group (see Rule 18a).
 
             var stdDictTableFilteredByGroup = _stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", group.Name);
-
             var fileDictTableFilteredByGroup = _groups.GetGroup("DICT").GetRowsByFilter("DICT_GRP", group.Name);
 
-            if (stdDictTableFilteredByGroup is null && fileDictTableFilteredByGroup is null)
+            var stdDictTableName = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.GROUP);
+            var fileDictTableName = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.GROUP);
+
+            if (stdDictTableName.Any() == false && fileDictTableName.Any() == false)
             {
                 _errors.Add(new RuleErrorModel()
                 {
@@ -178,62 +180,40 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            var fileDictTableHeadingRows = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).ReturnAllValuesOf("DICT_HDNG");
-            var groupHeadings = group.Columns.Select(c => c.Heading).ToList();
+            var stdDictTableHeadings = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).ReturnAllValuesOf("DICT_HDNG");
+            var fileDictTableHeadings = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).ReturnAllValuesOf("DICT_HDNG");
 
-            var intersectDictWithFile = fileDictTableHeadingRows.Intersect(groupHeadings).ToArray();
-            var intersectFileWithDict = groupHeadings.Intersect(fileDictTableHeadingRows).ToArray();
+            var combinedDictTableHeadings = stdDictTableHeadings.Concat(fileDictTableHeadings).Distinct();
 
-            if (intersectDictWithFile.SequenceEqual(intersectFileWithDict))
-                return;
-
-            for (int i = 0; i < intersectDictWithFile.Length; i++)
+            foreach (var dictTableHeading in combinedDictTableHeadings)
             {
-                if (intersectDictWithFile[i] == intersectFileWithDict[i])
-                    continue;
-
                 _errors.Add(new RuleErrorModel()
                 {
                     Status = "Fail",
                     RuleId = "9",
                     Group = group.Name,
                     RowNumber = group.HeadingRow,
-                    Message = $"Headings not in order starting from {intersectFileWithDict[i]}. Expected order: ...{string.Join('|', intersectDictWithFile[i..])}",
+                    Message = $"{dictTableHeading} not found in DICT table or the standard AGS4 dictionary.",
                 });
                 return;
             }
         }
-
+        // TODO Fix check repo
         private void Rule10a(AgsGroupModel group)
         {
+            // In every GROUP, certain HEADINGs are defined as KEY. There shall not be more than one row of data in each GROUP with the
+            // same combination of KEY field entries. KEY fields must appear in each GROUP, but may contain null data(see Rule 12).
+
             // Add code to add statuses to custom fields using local dict
-            var keyHeadings = group.Columns.ByStatus(Status.KEY).ReturnDescriptor(Descriptor.HEADING);
+            var keyColumns = group.Columns.ByStatus(Status.KEY);
 
-            var groupHeadings = group.Columns.ReturnDescriptor(Descriptor.HEADING);
+            var keyHeadings = keyColumns.ReturnDescriptor(Descriptor.HEADING);
 
-            List<string> duplicateHeadings = new();
+            var dictKeyHeadings = _stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", group.Name).AndBy("DICT_STAT", Status.KEY).ReturnAllValuesOf("DICT_HDNG");
 
-            foreach (var keyHeading in keyHeadings)
-            {
-                if (groupHeadings.Any(i => i == keyHeading) == false)
-                {
-                    _errors.Add(new RuleErrorModel()
-                    {
-                        Status = "Fail",
-                        RuleId = "10a",
-                        Group = group.Name,
-                        RowNumber = group.HeadingRow,
-                        Message = $"KEY field {keyHeading} not found.",
-                    });
-                }
+            var differences = dictKeyHeadings.Except(keyHeadings);
 
-                else if (groupHeadings.Count(i => i == keyHeading) > 1)
-                {
-                    duplicateHeadings.Add(keyHeading);
-                }
-            }
-
-            if (duplicateHeadings.Count > 0)
+            foreach (var diff in differences)
             {
                 _errors.Add(new RuleErrorModel()
                 {
@@ -241,11 +221,13 @@ namespace AgsVerifierLibrary.Rules
                     RuleId = "10a",
                     Group = group.Name,
                     RowNumber = group.HeadingRow,
-                    Message = $"Duplicate KEY field combination: ...{string.Join('|', duplicateHeadings)}",
+                    Message = $"KEY field {diff} not found.",
                 });
             }
-        }
 
+            //var test = keyColumns.GetRowsByFilter()
+        }
+        // TODO Fix check repo
         private void Rule10b(AgsGroupModel group)
         {
             // Some HEADINGs are marked as REQUIRED.REQUIRED fields must appear in the data GROUPs where they are indicated in the AGS FORMAT DATA DICTIONARY.
@@ -957,10 +939,15 @@ namespace AgsVerifierLibrary.Rules
                     continue;
                 }
 
-                var stdGroupDictRows = _stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_GRP", group.Name);
+                string[] exclusions = new string[] { "SPEC", "TEST" };
+
+                if (exclusions.Contains(splitHeading[0]))
+                    continue;
+
+                var stdGroupDictRows = _stdDictionary.GetGroup("DICT").GetRowsByFilter("DICT_TYPE", Descriptor.GROUP).ReturnAllValuesOf("DICT_GRP");
                 var rootGroup = _groups.GetGroup(splitHeading[0]);
 
-                if (stdGroupDictRows.ReturnFirstValueOf("DICT_TYPE") == splitHeading[0] && rootGroup is null)
+                if (stdGroupDictRows.Contains(splitHeading[0]) && rootGroup is null)
                 {
                     _errors.Add(
                         new RuleErrorModel()

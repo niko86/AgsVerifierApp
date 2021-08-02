@@ -31,7 +31,7 @@ namespace AgsVerifierLibrary.Actions
             _stdDictGroup = stdDictionary?.GetGroup("DICT");
         }
 
-        public List<AgsGroupModel> ReturnGroupModels(bool rowChecks) // Instaniate at DataAccess and pass the list in???
+        public List<AgsGroupModel> ReturnGroupModels(bool rowChecks) 
         {
             Process(rowChecks);
             return _agsGroups;
@@ -72,7 +72,7 @@ namespace AgsVerifierLibrary.Actions
                         break;
                 }
 
-                if (rowChecks) // Position is important, check book to see if this is correct code model.
+                if (rowChecks) 
                     RowBasedRules.CheckRow(csv, _ruleErrors, _currentGroup);
             }
 
@@ -85,11 +85,11 @@ namespace AgsVerifierLibrary.Actions
             if (_currentGroup is not null)
                 ProcessCurrentGroup();         
 
-            AgsGroupModel agsGroup = new() { Index = _groupCounter, Name = csv.GetField(1), GroupRow = csv.Parser.RawRow };
+            AgsGroupModel agsGroup = new() { Name = csv.GetField(1), GroupRow = csv.Parser.RawRow };
 
+            // why not do at the end and combine the two dictionaries. MOVE TO OWN METHOD AND RUN AFTER WHILE LOOP.
             if (_stdDictGroup is not null)
             {
-                // why not do at the end and combine the two dictionaries
                 agsGroup.ParentGroup = _stdDictGroup.GetRowsByFilter("DICT_GRP", csv.GetField(1)).AndBy("DICT_TYPE", "GROUP").ReturnFirstValueOf("DICT_PGRP");
             }
 
@@ -126,6 +126,10 @@ namespace AgsVerifierLibrary.Actions
             {
                 try
                 {
+                    if (i == 0)
+                    {
+
+                    }
                     _currentGroup.GetColumn(i).Data.Add(csv.Parser.Record[i]);
                 }
                 catch (Exception)

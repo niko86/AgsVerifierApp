@@ -26,26 +26,14 @@ namespace AgsVerifierLibrary.Models
 
         public object this[int index]
         {
-            get
-            {
-                return _group.Columns[index][_rowIndex];
-            }
-            set
-            {
-                _group.Columns[index][_rowIndex] = (string) value;
-            }
+            get => _group.Columns[index][_rowIndex];
+            set => _group.Columns[index][_rowIndex] = (string) value;
         }
 
         public object this[string columnName]
         {
-            get
-            {
-                return _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex];
-            }
-            set
-            {
-                _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex] = (string) value;
-            }
+            get => _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex];
+            set => _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex] = (string) value;
         }
 
         public override string ToString()

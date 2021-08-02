@@ -5,8 +5,6 @@ namespace AgsVerifierLibrary.Models
 {
 	public class AgsGroupModel
 	{
-		// HOW does the dataframe put back following changes? IS IT NEEDED?
-		public int Index { get; set; }
 		public string Name { get; set; }
 		public int GroupRow { get; set; }
 		public int HeadingRow { get; set; }

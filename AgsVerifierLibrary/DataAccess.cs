@@ -33,11 +33,6 @@ namespace AgsVerifierLibrary
 
             _ruleErrors.Sort((a, b) => a.RuleId.CompareTo(b.RuleId));
 
-            var test = _agsGroups.First();
-            var test2 = test.Columns.GetEnumerator();
-            var row = new AgsRowModel(test, 0);
-            var x = row["PROJ_ENG"];
-
             foreach (var error in _ruleErrors)
             {
                 System.Console.WriteLine($"{error.RuleId} - {error.Group} - {error.Message}");

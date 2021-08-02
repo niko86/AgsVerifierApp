@@ -123,6 +123,17 @@ namespace AgsVerifierLibrary.Extensions
             }
         }
 
+        public static IEnumerable<Dictionary<string, string>> GetRowsByFilter(this AgsGroupModel group, string headingName, Descriptor descriptor)
+        {
+            var column = group.GetColumn(headingName);
+
+            for (int i = 0; i < column.Data.Count; i++)
+            {
+                if (column.Data[i] == descriptor.Name())
+                    yield return SingleRow(group, i);
+            }
+        }
+
         private static void AddField(Dictionary<string, string> dict, AgsColumnModel agsColumn, int rowIndex)
         {
             dict.Add(agsColumn.Heading, agsColumn.Data[rowIndex]);
