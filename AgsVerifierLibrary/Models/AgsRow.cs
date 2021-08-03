@@ -6,34 +6,34 @@ using System.Text;
 
 namespace AgsVerifierLibrary.Models
 {
-    public class AgsRowModel : IEnumerable<object>
+    public class AgsRow : IEnumerable<string>
     {
-        private readonly AgsGroupModel _group;
+        private readonly AgsGroup _group;
         private readonly int _rowIndex;
-        internal AgsRowModel(AgsGroupModel group, int rowIndex)
+        internal AgsRow(AgsGroup group, int rowIndex)
         {
             _group = group;
             _rowIndex = rowIndex;
         }
 
-        public IEnumerator<object> GetEnumerator()
+        public IEnumerator<string> GetEnumerator()
         {
-            foreach (AgsColumnModel column in _group.Columns)
+            foreach (var column in _group.Columns)
             {
                 yield return column.Data[_rowIndex];
             }
         }
 
-        public object this[int index]
+        public string this[int index]
         {
             get => _group.Columns[index][_rowIndex];
-            set => _group.Columns[index][_rowIndex] = (string) value;
+            set => _group.Columns[index][_rowIndex] = value;
         }
 
-        public object this[string columnName]
+        public string this[string columnName]
         {
             get => _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex];
-            set => _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex] = (string) value;
+            set => _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex] = value;
         }
 
         public override string ToString()

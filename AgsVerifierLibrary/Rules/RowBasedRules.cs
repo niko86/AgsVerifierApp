@@ -10,11 +10,9 @@ namespace AgsVerifierLibrary.Rules
     public static class RowBasedRules
     {
         private static readonly Regex _regexCsvRowSplit = new(@",(?=(?:""[^""]*?(?:[^""]*)*))|,(?=[^"", ]+(?:, |$))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        private static readonly Regex _regexAgsHeadingField = new(@"[^A-Z0-9_]", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex _regexOnlyWhiteSpace = new(@"^\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         
-        
-        public static void CheckRow(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
+        public static void CheckRow(CsvReader csv, List<RuleError> errors, AgsGroup group)
         {
             Rule1(csv, errors);
             Rule2a(csv, errors, group);
@@ -26,12 +24,12 @@ namespace AgsVerifierLibrary.Rules
             Rule6();
         }
 
-        private static void Rule1(CsvReader csv, List<RuleErrorModel> errors)
+        private static void Rule1(CsvReader csv, List<RuleError> errors)
         {
             if (Encoding.UTF8.GetByteCount(csv.Parser.RawRecord) == csv.Parser.RawRecord.Length)
                 return;
 
-            errors.Add(new RuleErrorModel()
+            errors.Add(new RuleError()
             {
                 Status = "Fail",
                 RuleId = "1",
@@ -40,12 +38,12 @@ namespace AgsVerifierLibrary.Rules
             });
         }
 
-        private static void Rule2a(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
+        private static void Rule2a(CsvReader csv, List<RuleError> errors, AgsGroup group)
         {
             if (csv.Parser.RawRecord.EndsWith("\r\n"))
                 return;
 
-            errors.Add(new RuleErrorModel()
+            errors.Add(new RuleError()
             {
                 Status = "Fail",
                 RuleId = "2a",
@@ -56,7 +54,7 @@ namespace AgsVerifierLibrary.Rules
             );
         }
 
-        private static void Rule2c(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
+        private static void Rule2c(CsvReader csv, List<RuleError> errors, AgsGroup group)
         {
             // DOES THIS EXIST???
 
@@ -66,7 +64,7 @@ namespace AgsVerifierLibrary.Rules
             if (csv.Parser.Record.GroupBy(r => r).Count() == csv.Parser.Record.Length)
                 return;
 
-            errors.Add(new RuleErrorModel()
+            errors.Add(new RuleError()
             {
                 Status = "Fail",
                 RuleId = "2c",
@@ -77,14 +75,14 @@ namespace AgsVerifierLibrary.Rules
             );
         }
 
-        private static void Rule3(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
+        private static void Rule3(CsvReader csv, List<RuleError> errors, AgsGroup group)
         {
             List<string> descriptors = new() { "GROUP", "HEADING", "TYPE", "UNIT", "DATA" };
 
             if (descriptors.Any(d => d.Contains(csv.GetField(0))))
                 return;
 
-            errors.Add(new RuleErrorModel()
+            errors.Add(new RuleError()
             {
                 Status = "Fail",
                 RuleId = "3",
@@ -95,7 +93,7 @@ namespace AgsVerifierLibrary.Rules
             );
         }
 
-        private static void Rule4a(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
+        private static void Rule4a(CsvReader csv, List<RuleError> errors, AgsGroup group)
         {
             if (csv.GetField(0) != "GROUP")
                 return;
@@ -105,7 +103,7 @@ namespace AgsVerifierLibrary.Rules
 
             if (csv.Parser.Record.Length > 2)
             {
-                errors.Add(new RuleErrorModel()
+                errors.Add(new RuleError()
                 {
                     Status = "Fail",
                     RuleId = "4a",
@@ -116,7 +114,7 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            errors.Add(new RuleErrorModel()
+            errors.Add(new RuleError()
             {
                 Status = "Fail",
                 RuleId = "4a",
@@ -127,7 +125,7 @@ namespace AgsVerifierLibrary.Rules
             );
         }
 
-        private static void Rule4b(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
+        private static void Rule4b(CsvReader csv, List<RuleError> errors, AgsGroup group)
         {
             List<string> descriptors = new() { "TYPE", "UNIT", "DATA" };
 
@@ -136,7 +134,7 @@ namespace AgsVerifierLibrary.Rules
 
             if (group.Columns.Select(c => c.Heading) == null)
             {
-                errors.Add(new RuleErrorModel()
+                errors.Add(new RuleError()
                 {
                     Status = "Fail",
                     RuleId = "4b",
@@ -153,7 +151,7 @@ namespace AgsVerifierLibrary.Rules
             if (headings.Count() == csv.Parser.Record.Length)
                 return;
 
-            errors.Add(new RuleErrorModel()
+            errors.Add(new RuleError()
             {
                 Status = "Fail",
                 RuleId = "4b",
@@ -164,7 +162,7 @@ namespace AgsVerifierLibrary.Rules
             );
         }
 
-        private static void Rule5(CsvReader csv, List<RuleErrorModel> errors, AgsGroupModel group)
+        private static void Rule5(CsvReader csv, List<RuleError> errors, AgsGroup group)
         {
             if (csv.Parser.RawRecord == "\r\n" || csv.Parser.RawRecord == "\n")
                 return;
@@ -175,7 +173,7 @@ namespace AgsVerifierLibrary.Rules
 
             if (containsOrphanQuotes)
             {
-                errors.Add(new RuleErrorModel()
+                errors.Add(new RuleError()
                 {
                     Status = "Fail",
                     RuleId = "5",
@@ -189,7 +187,7 @@ namespace AgsVerifierLibrary.Rules
 
             if (containsOnlySpaces)
             {
-                errors.Add(new RuleErrorModel()
+                errors.Add(new RuleError()
                 {
                     Status = "Fail",
                     RuleId = "5",
@@ -205,7 +203,7 @@ namespace AgsVerifierLibrary.Rules
             if (allStartsWithDoubleQuote && allEndsWithDoubleQuote)
                 return;
 
-            errors.Add(new RuleErrorModel()
+            errors.Add(new RuleError()
             {
                 Status = "Fail",
                 RuleId = "5",

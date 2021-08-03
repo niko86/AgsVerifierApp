@@ -1,6 +1,6 @@
 ﻿namespace AgsVerifierLibrary.Models
 {
-	public class RuleErrorModel
+	public class RuleError
 	{
 		public string Status { get; set; }
 		public string RuleId { get; set; }

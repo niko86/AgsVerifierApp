@@ -2,36 +2,35 @@
 using AgsVerifierLibrary.Models;
 using AgsVerifierLibrary.Rules;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace AgsVerifierLibrary
 {
     public class DataAccess
     {
-        private readonly List<RuleErrorModel> _ruleErrors;
-        private List<AgsGroupModel> _stdDictionary;
-        private List<AgsGroupModel> _agsGroups;
+        private readonly AgsContainer _ags;
+        private readonly List<RuleError> _ruleErrors;
+        private readonly AgsContainer _stdDictionary;
 
-        public DataAccess()
+        public DataAccess(string dictPath, string filePath)
         {
-            _ruleErrors = new List<RuleErrorModel>();
+            _ags = new AgsContainer(filePath);
+            _ruleErrors = new List<RuleError>();
+            _stdDictionary = new AgsContainer(dictPath);
         }
 
-        public void ParseAgsDictionary(string dictPath)
+        public void ParseAgsDictionary()
         {
-            ProcessAgsFile processAgsFile = new(dictPath);
-            _stdDictionary = processAgsFile.ReturnGroupModels(rowChecks: false);
+            ProcessAgsFile processAgsFile = new(_stdDictionary);
+            processAgsFile.Process();
         }
 
-        public void ParseAgsFile(string filePath) 
+        public void ParseAgsFile() 
         {
-            ProcessAgsFile processAgsFile = new(filePath, _ruleErrors, _stdDictionary);
-            _agsGroups = processAgsFile.ReturnGroupModels(rowChecks: true);
+            ProcessAgsFile processAgsFile = new(_ags, _ruleErrors, _stdDictionary);
+            processAgsFile.Process();
             
-            GroupBasedRules groupRules = new(_agsGroups, _stdDictionary, _ruleErrors, filePath);
+            GroupBasedRules groupRules = new(_ags, _ruleErrors, _stdDictionary);
             groupRules.CheckGroups();
-
-            _ruleErrors.Sort((a, b) => a.RuleId.CompareTo(b.RuleId));
 
             foreach (var error in _ruleErrors)
             {

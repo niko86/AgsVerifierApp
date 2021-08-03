@@ -14,30 +14,19 @@ namespace AgsVerifierLibrary.Actions
 {
     public class ProcessAgsFile
     {
-        private readonly string _agsFilePath;
-        private readonly List<AgsGroupModel> _agsGroups;
-        private readonly List<RuleErrorModel> _ruleErrors;
-        private readonly AgsGroupModel _stdDictGroup;
+        private readonly AgsContainer _ags;
+        private readonly List<RuleError> _ruleErrors;
+        private readonly AgsContainer _stdDictionary;
+        private AgsGroup _currentGroup;
 
-        private AgsGroupModel _currentGroup;
-        private int _groupCounter = 1;
-
-        public ProcessAgsFile(string agsFilePath, List<RuleErrorModel> ruleErrors = null, List<AgsGroupModel> stdDictionary = null)
+        public ProcessAgsFile(AgsContainer ags, List<RuleError> ruleErrors = null, AgsContainer stdDictionary = null)
         {
-            _agsFilePath = agsFilePath;
-
+            _ags = ags;
             _ruleErrors = ruleErrors;
-            _agsGroups = new List<AgsGroupModel>();
-            _stdDictGroup = stdDictionary?.GetGroup("DICT");
+            _stdDictionary = stdDictionary;
         }
 
-        public List<AgsGroupModel> ReturnGroupModels(bool rowChecks) 
-        {
-            Process(rowChecks);
-            return _agsGroups;
-        }
-
-        private void Process(bool rowChecks)
+        public void Process()
         {
             var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
@@ -46,7 +35,7 @@ namespace AgsVerifierLibrary.Actions
                 Quote = '"',
             };
 
-            using var reader = new StreamReader(_agsFilePath);
+            using var reader = new StreamReader(_ags.FilePath);
             using var csv = new CsvReader(reader, csvConfig);
             while (csv.Read())
             {
@@ -72,38 +61,39 @@ namespace AgsVerifierLibrary.Actions
                         break;
                 }
 
-                if (rowChecks) 
+                if (_stdDictionary is not null) 
                     RowBasedRules.CheckRow(csv, _ruleErrors, _currentGroup);
             }
 
-            // Catches last group
-            ProcessCurrentGroup();
+            // Last Actions
+            // TODO
         }
 
         private void ProcessGroupRow(CsvReader csv)
         {
-            if (_currentGroup is not null)
-                ProcessCurrentGroup();         
-
-            AgsGroupModel agsGroup = new() { Name = csv.GetField(1), GroupRow = csv.Parser.RawRow };
+            AgsGroup agsGroup = new() { Name = csv.GetField(1), GroupRow = csv.Parser.RawRow };
 
             // why not do at the end and combine the two dictionaries. MOVE TO OWN METHOD AND RUN AFTER WHILE LOOP.
-            if (_stdDictGroup is not null)
+            if (_stdDictionary is not null)
             {
-                agsGroup.ParentGroup = _stdDictGroup.GetRowsByFilter("DICT_GRP", csv.GetField(1)).AndBy("DICT_TYPE", "GROUP").ReturnFirstValueOf("DICT_PGRP");
+                agsGroup.ParentGroup = _stdDictionary["DICT"].GetRowsByFilter("DICT_GRP", csv.GetField(1)).AndBy("DICT_TYPE", "GROUP").ReturnFirstValueOf("DICT_PGRP");
             }
 
-            _agsGroups.Add(agsGroup);
+            _ags.Groups.Add(agsGroup);
 
             _currentGroup = agsGroup;
-            _groupCounter++;
+        }
+
+        private void SetParentGroups()
+        {
+
         }
 
         private void ProcessHeadingRow(CsvReader csv)
         {
             AssignProperties(csv, Descriptor.HEADING);
             
-            if (_stdDictGroup is not null)
+            if (_stdDictionary is not null)
                 AssignStatuses(csv); // Decided to do only stdDict status assignments within ProcessAgsFile. Ags file dict group status need assigning afterwards.
         }
 
@@ -122,20 +112,20 @@ namespace AgsVerifierLibrary.Actions
             if (_currentGroup.FirstDataRow == 0)
                 _currentGroup.FirstDataRow = csv.Parser.RawRow;
 
+            // Adding index
+            //_currentGroup[0].Data.Add(csv.Parser.RawRow.ToString());
+
+            //for (int i = 1; i <= csv.Parser.Record[1..].Length; i++)
             for (int i = 0; i < _currentGroup.Columns.Count; i++)
             {
                 try
                 {
-                    if (i == 0)
-                    {
-
-                    }
-                    _currentGroup.GetColumn(i).Data.Add(csv.Parser.Record[i]);
+                    _currentGroup[i].Data.Add(csv.Parser.Record[i]);
                 }
                 catch (Exception)
                 {
                     // TODO add error
-                    _currentGroup.GetColumn(i).Data.Add(string.Empty);
+                    _currentGroup[i].Data.Add(string.Empty);
                 }
             }
         }
@@ -151,12 +141,12 @@ namespace AgsVerifierLibrary.Actions
             {
                 try
                 {
-                    _currentGroup.GetColumn(i).SetColumnDescriptor(descriptor, csv.Parser.Record[i]);
+                    _currentGroup[i].SetColumnDescriptor(descriptor, csv.Parser.Record[i]);
                 }
                 catch (IndexOutOfRangeException)
                 {
                     // TODO add error
-                    _currentGroup.GetColumn(i).SetColumnDescriptor(descriptor, string.Empty);
+                    _currentGroup[i].SetColumnDescriptor(descriptor, string.Empty);
                 }
             }
         }
@@ -167,37 +157,34 @@ namespace AgsVerifierLibrary.Actions
 
             for (int i = 0; i < row.Length; i++)
             {
-                _currentGroup.GetColumn(row[i]).Status = ReturnStatus(row[i]);
+                _currentGroup[row[i]].Status = ReturnStatus(row[i]);
             }
         }
 
         private string ReturnStatus(string field)
         {
             // TODO check current dictionary in file at end.
-            int stdDictHeadingIndex = _stdDictGroup.GetColumn("DICT_HDNG").Data.IndexOf(field);
+            int stdDictHeadingIndex = _stdDictionary["DICT"]["DICT_HDNG"].Data.IndexOf(field);
 
             if (stdDictHeadingIndex > -1)
-                return _stdDictGroup.GetColumn("DICT_STAT").Data.ElementAt(stdDictHeadingIndex);
+                return _stdDictionary["DICT"]["DICT_STAT"].Data.ElementAt(stdDictHeadingIndex);
 
             return string.Empty;
         }
 
         private void GenerateColumns(int length)
         {
-            _currentGroup.Columns = new List<AgsColumnModel>();
+            _currentGroup.Columns = new List<AgsColumn>();
 
             for (int i = 0; i < length; i++)
             {
-                AgsColumnModel agsColumn = new();
-                agsColumn.Index = i;
-                agsColumn.Group = _currentGroup.Name;
+                AgsColumn agsColumn = new()
+                {
+                    PartOfGroup = _currentGroup.Name
+                };
+
                 _currentGroup.Columns.Add(agsColumn);
             }
-        }
-
-        private void ProcessCurrentGroup()
-        {
-            _currentGroup.DataFrame = AgsGroupModelToDataFrame.ReturnDataFrame(_currentGroup);
         }
     }
 }

@@ -17,7 +17,7 @@ namespace AgsVerifierLibrary.Actions
 
         }
 
-		public void Run(List<AgsGroupModel> groups, string basePath)
+		public void Run(List<AgsGroup> groups, string basePath)
 		{
             //using ExcelPackage excelPackage = new();
             //foreach (var group in groups)
