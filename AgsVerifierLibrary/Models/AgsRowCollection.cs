@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AgsVerifierLibrary.Models
 {
@@ -26,7 +27,7 @@ namespace AgsVerifierLibrary.Models
             }
         }
 
-        public int Count => _group.RowCount;
+        public int Count => _group.Columns.First().RowCount;
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }

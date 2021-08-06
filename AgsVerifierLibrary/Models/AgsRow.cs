@@ -1,12 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 namespace AgsVerifierLibrary.Models
 {
-    public class AgsRow : IEnumerable<string>
+    public class AgsRow : IEnumerable<object>
     {
         private readonly AgsGroup _group;
         private readonly int _rowIndex;
@@ -16,7 +14,7 @@ namespace AgsVerifierLibrary.Models
             _rowIndex = rowIndex;
         }
 
-        public IEnumerator<string> GetEnumerator()
+        public IEnumerator<dynamic> GetEnumerator()
         {
             foreach (var column in _group.Columns)
             {
@@ -24,13 +22,13 @@ namespace AgsVerifierLibrary.Models
             }
         }
 
-        public string this[int index]
+        public object this[int index]
         {
             get => _group.Columns[index][_rowIndex];
             set => _group.Columns[index][_rowIndex] = value;
         }
 
-        public string this[string columnName]
+        public object this[string columnName]
         {
             get => _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex];
             set => _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex] = value;
@@ -38,13 +36,10 @@ namespace AgsVerifierLibrary.Models
 
         public override string ToString()
         {
-            StringBuilder sb = new();
-            foreach (object value in this)
-            {
-                sb.Append(value?.ToString() ?? "null").Append(' ');
-            }
-            return sb.ToString();
+            return string.Join('|', this);
         }
+
+        public int Index => (int)this[0];
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }

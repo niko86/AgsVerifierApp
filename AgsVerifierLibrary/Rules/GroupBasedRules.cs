@@ -61,9 +61,13 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
+        /// <summary>
+        /// Each data file shall contain one or more data GROUPs. Each data GROUP shall comprise a number of
+        /// GROUP HEADER rows and must have one or more DATA rows.
+        /// </summary>
         private void Rule2(AgsGroup group)
         {
-            if (group["HEADING"].Data.Any())
+            if (group.RowCount > 0)
                 return;
 
             _errors.Add(new RuleError()
@@ -75,6 +79,10 @@ namespace AgsVerifierLibrary.Rules
             });
         }
 
+        /// <summary>
+        /// The GROUP HEADER rows fully define the data presented within the DATA rows for that group (Rule 8). As a 
+        /// minimum, the GROUP HEADER rows comprise GROUP, HEADING, UNIT and TYPE rows presented in that order.
+        /// </summary>
         private void Rule2b(AgsGroup group)
         {
             List<string> descriptors = new() { "HEADING", "UNIT", "TYPE" };
@@ -88,6 +96,7 @@ namespace AgsVerifierLibrary.Rules
                         Status = "Fail",
                         RuleId = "2b",
                         Group = group.Name,
+                        RowNumber = group.GroupRow,
                         Message = $"{descriptor} row missing from the {group.Name} group.",
                     });
                 }
@@ -123,11 +132,13 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
+        /// <summary>
+        /// The order of data FIELDs in each line within a GROUP is defined at the start of each GROUP in the HEADING row.
+        /// HEADINGs shall be in the order described in the AGS FORMAT DATA DICTIONARY.
+        /// </summary>
         private void Rule7(AgsGroup group)
         {
-            // The order of data FIELDs in each line within a GROUP is defined at the start of each GROUP in the HEADING row.
-            // HEADINGs shall be in the order described in the AGS FORMAT DATA DICTIONARY.
-            var dictHeadings = _stdDictionary["DICT"].GetRowsByFilter("DICT_GRP", group.Name).AndBy("DICT_TYPE", Descriptor.HEADING.ToString()).ReturnAllValuesOf("DICT_HDNG");
+            var dictHeadings = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", Descriptor.HEADING).ReturnAllValuesOf("DICT_HDNG");
             var groupHeadings = group.Columns.Select(c => c.Heading);
 
             var intersectDictWithFile = dictHeadings.Intersect(groupHeadings).ToArray();
@@ -153,14 +164,15 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
+        /// <summary>
+        /// Data HEADING and GROUP names shall be taken from the AGS FORMAT DATA DICTIONARY. In cases where there is no suitable entry,
+        /// a user-defined GROUP and/or HEADING may be used in accordance with Rule 18. Any user-defined HEADINGs shall be included at
+        /// the end of the HEADING row after the standard HEADINGs in the order defined in the DICT group (see Rule 18a).
+        /// </summary>
         private void Rule9(AgsGroup group)
         {
-            // Data HEADING and GROUP names shall be taken from the AGS FORMAT DATA DICTIONARY. In cases where there is no suitable entry,
-            // a user-defined GROUP and/or HEADING may be used in accordance with Rule 18. Any user-defined HEADINGs shall be included at
-            // the end of the HEADING row after the standard HEADINGs in the order defined in the DICT group (see Rule 18a).
-
-            var stdDictTableFilteredByGroup = _stdDictionary["DICT"].GetRowsByFilter("DICT_GRP", group.Name);
-            var fileDictTableFilteredByGroup = _ags["DICT"].GetRowsByFilter("DICT_GRP", group.Name);
+            var stdDictTableFilteredByGroup = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name);
+            var fileDictTableFilteredByGroup = _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name);
 
             var stdDictTableName = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.GROUP);
             var fileDictTableName = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.GROUP);
@@ -183,31 +195,47 @@ namespace AgsVerifierLibrary.Rules
 
             var combinedDictTableHeadings = stdDictTableHeadings.Concat(fileDictTableHeadings).Distinct();
 
-            foreach (var dictTableHeading in combinedDictTableHeadings)
+            var groupHeadings = group.ReturnDescriptor(Descriptor.HEADING);
+
+            foreach (var groupHeading in groupHeadings)
             {
+                if (groupHeadings.Count(h => h == groupHeading) > 1)
+                {
+                    _errors.Add(new RuleError()
+                    {
+                        Status = "Fail",
+                        RuleId = "9",
+                        Group = group.Name,
+                        RowNumber = group.HeadingRow,
+                        Message = $"Duplicate GROUP HEADING found in field  {groupHeading} found.",
+                    });
+                }
+
+                if (combinedDictTableHeadings.Contains(groupHeading))
+                    continue;
+
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
                     RuleId = "9",
                     Group = group.Name,
                     RowNumber = group.HeadingRow,
-                    Message = $"{dictTableHeading} not found in DICT table or the standard AGS4 dictionary.",
+                    Message = $"{groupHeading} not found in DICT table or the standard AGS4 dictionary.",
                 });
-                return;
             }
         }
-        // TODO Additional false positives should be checking parent group??
+
+        /// <summary>
+        /// In every GROUP, certain HEADINGs are defined as KEY. There shall not be more than one row of data in each GROUP with the
+        /// same combination of KEY field entries. KEY fields must appear in each GROUP, but may contain null data(see Rule 12).
+        /// </summary>
         private void Rule10a(AgsGroup group)
         {
-            // In every GROUP, certain HEADINGs are defined as KEY. There shall not be more than one row of data in each GROUP with the
-            // same combination of KEY field entries. KEY fields must appear in each GROUP, but may contain null data(see Rule 12).
-
-            // Add code to add statuses to custom fields using local dict
-            var keyColumns = group.Columns.ByStatus(Status.KEY);
+            var keyColumns = group.ColumnsByStatus(Status.KEY);
 
             var keyHeadings = keyColumns.ReturnDescriptor(Descriptor.HEADING);
 
-            var dictKeyHeadings = _stdDictionary["DICT"].GetRowsByFilter("DICT_GRP", group.Name).AndBy("DICT_STAT", Status.KEY).ReturnAllValuesOf("DICT_HDNG");
+            var dictKeyHeadings = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_STAT", Status.KEY).ReturnAllValuesOf("DICT_HDNG");
 
             var differences = dictKeyHeadings.Except(keyHeadings);
 
@@ -223,19 +251,33 @@ namespace AgsVerifierLibrary.Rules
                 });
             }
 
-            //var test = keyColumns.GetRowsByFilter()
+            foreach (var row in group.Rows)
+            {
+                string str = row.ToStringByStatus(Status.KEY);
+
+                if (group.Rows.Count(r => r.ToStringByStatus(Status.KEY) == str) > 1)
+                {
+                    _errors.Add(new RuleError()
+                    {
+                        Status = "Fail",
+                        RuleId = "10a",
+                        Group = group.Name,
+                        RowNumber = (int) row["Index"],
+                        Message = $"Duplicate key field combination: {str}",
+                    });
+                }
+            }
         }
-        // TODO Fix check repo
+
+        /// <summary>
+        /// Some HEADINGs are marked as REQUIRED.REQUIRED fields must appear in the data GROUPs where they are indicated in the AGS FORMAT DATA DICTIONARY.
+        /// These fields require data entry and cannot be null(i.e.left blank or empty).
+        /// </summary>
         private void Rule10b(AgsGroup group)
         {
-            // Some HEADINGs are marked as REQUIRED.REQUIRED fields must appear in the data GROUPs where they are indicated in the AGS FORMAT DATA DICTIONARY.
-            // These fields require data entry and cannot be null(i.e.left blank or empty).
-
-            var requiredHeadings = group.Columns.ByStatus(Status.REQUIRED).ReturnDescriptor(Descriptor.HEADING);
-
-            var groupHeadings = group.Columns.ReturnDescriptor(Descriptor.HEADING);
-
-            List<string> requiredHeadingsWithBlanks = new();
+            var requiredColumns = group.ColumnsByStatus(Status.REQUIRED);
+            var requiredHeadings = requiredColumns.ReturnDescriptor(Descriptor.HEADING);
+            var groupHeadings = group.ReturnDescriptor(Descriptor.HEADING);
 
             foreach (var requiredHeading in requiredHeadings)
             {
@@ -250,32 +292,34 @@ namespace AgsVerifierLibrary.Rules
                         Message = $"REQUIRED field {requiredHeading} not found.",
                     });
                 }
+            }
 
-                else if (group[requiredHeading].Data.Any(i => string.IsNullOrWhiteSpace(i)))
+            foreach (var row in group.Rows)
+            {
+                string str = row.ToStringByStatus(Status.REQUIRED);
+
+                if (str.Contains("???"))
                 {
-                    requiredHeadingsWithBlanks.Add(requiredHeading);
+                    _errors.Add(new RuleError()
+                    {
+                        Status = "Fail",
+                        RuleId = "10b",
+                        Group = group.Name,
+                        RowNumber = (int)row["Index"],
+                        Message = $"REQUIRED field(s) containing empty values: ...{str}",
+                    });
                 }
             }
-
-            if (requiredHeadingsWithBlanks.Count > 0)
-            {
-                _errors.Add(new RuleError()
-                {
-                    Status = "Fail",
-                    RuleId = "10b",
-                    Group = group.Name,
-                    RowNumber = group.HeadingRow,
-                    Message = $"REQUIRED field(s) containing empty values: ...{string.Join('|', requiredHeadingsWithBlanks)}",
-                });
-            }
         }
+
         // TODO
+        /// <summary>
+        /// Links are made between data rows in GROUPs by the KEY fields.
+        /// Every entry made in the KEY fields in any GROUP must have an equivalent entry in its PARENT GROUP.
+        /// The PARENT GROUP must be included within the data file.
+        /// </summary>
         private void Rule10c(AgsGroup group)
         {
-            // Links are made between data rows in GROUPs by the KEY fields.
-            // Every entry made in the KEY fields in any GROUP must have an equivalent entry in its PARENT GROUP.
-            // The PARENT GROUP must be included within the data file.
-
             if (_parentGroupExceptions.Contains(group.Name))
                 return; 
 
@@ -288,18 +332,20 @@ namespace AgsVerifierLibrary.Rules
                     Status = "Fail",
                     RuleId = "10c",
                     Group = group.Name,
+                    RowNumber = group.GroupRow,
                     Message = $"Parent group left blank in dictionary.",
                 });
                 return;
             }
 
-            if (_ags.Groups.ReturnGroupNames().Contains(parentGroupName) == false)
+            if (_ags.ReturnGroupNames().Contains(parentGroupName) == false)
             {
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
                     RuleId = "10c",
                     Group = group.Name,
+                    RowNumber = group.GroupRow,
                     Message = $"Could not find parent group {parentGroupName}.",
                 });
                 return;
@@ -314,6 +360,7 @@ namespace AgsVerifierLibrary.Rules
                     Status = "Fail",
                     RuleId = "10c",
                     Group = group.Name,
+                    RowNumber = group.GroupRow,
                     Message = $"Could not check parent entries since group definitions not found in standard dictionary or DICT table.",
                 });
                 return;
@@ -342,7 +389,7 @@ namespace AgsVerifierLibrary.Rules
 
         private void Rule10c_missingKeys(AgsGroup group, List<string> keyHeadings, bool parent)
         {
-            var groupKeyHeadings = group.Columns.ByStatus(Status.KEY).ReturnDescriptor(Descriptor.HEADING);
+            var groupKeyHeadings = group.ColumnsByStatus(Status.KEY).ReturnDescriptor(Descriptor.HEADING);
 
             var missingKeyHeadings = keyHeadings.Except(groupKeyHeadings);
 
@@ -361,13 +408,20 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
+        /// <summary>
+        ///  HEADINGs defined as a data TYPE of 'Record Link' (RL) can be used to link data rows to entries in GROUPs
+        ///  outside of the defined hierarchy (Rule 10c) or DICT group for user defined GROUPs. The GROUP name followed 
+        ///  by the KEY FIELDs defining the cross - referenced data row, in the order presented in the AGS4 DATA DICTIONARY.
+        /// </summary>
         private void Rule11()
         {
-            //  HEADINGs defined as a data TYPE of 'Record Link' (RL) can be used to link data rows to entries in GROUPs
-            //  outside of the defined hierarchy (Rule 10c) or DICT group for user defined GROUPs.
-            //  The GROUP name followed by the KEY FIELDs defining the cross - referenced data row, in the order presented in the AGS4 DATA DICTIONARY.
+
         }
 
+        /// <summary>
+        /// Each GROUP/KEY FIELD shall be separated by a delimiter character. This single delimiter character shall 
+        /// be defined in TRAN_DLIM. The default being "|" (ASCII character 124).
+        /// </summary>
         private void Rule11a()
         {
             AgsGroup group = _ags["TRAN"];
@@ -380,7 +434,7 @@ namespace AgsVerifierLibrary.Rules
                     Status = "Fail",
                     RuleId = "11a",
                     Group = group.Name,
-                    RowNumber = group.FirstDataRow,
+                    RowNumber = group.Rows[0].Index,
                     Message = $"TRAN_DLIM missing.",
                 });
             }
@@ -392,12 +446,17 @@ namespace AgsVerifierLibrary.Rules
                     Status = "Fail",
                     RuleId = "11a",
                     Group = group.Name,
-                    RowNumber = group.FirstDataRow,
+                    RowNumber = group.Rows[0].Index,
                     Message = $"TRAN_DLIM is a null value.",
                 });
             }
         }
 
+        /// <summary>
+        /// A heading of data TYPE 'Record Link' can refer to more than one combination of GROUP and KEY FIELDs. The 
+        /// combination shall be separated by a defined concatenation character.This single concatenation character 
+        /// shall be defined in TRAN_RCON.The default being "+" (ASCII character 43).
+        /// </summary>
         private void Rule11b()
         {
             AgsGroup group = _ags["TRAN"];
@@ -410,7 +469,7 @@ namespace AgsVerifierLibrary.Rules
                     Status = "Fail",
                     RuleId = "11b",
                     Group = group.Name,
-                    RowNumber = group.FirstDataRow,
+                    RowNumber = group.Rows[0].Index,
                     Message = $"TRAN_RCON missing.",
                 });
             }
@@ -422,63 +481,66 @@ namespace AgsVerifierLibrary.Rules
                     Status = "Fail",
                     RuleId = "11b",
                     Group = group.Name,
-                    RowNumber = group.FirstDataRow,
+                    RowNumber = group.Rows[0].Index,
                     Message = $"TRAN_RCON is a null value.",
                 });
             }
         }
 
+        /// <summary>
+        ///  Any heading of data TYPE 'Record Link' included in a data file shall cross-reference to the KEY FIELDs
+        ///  of data rows in the GROUP referred to by the heading contents.
+        /// </summary>
         private void Rule11c(AgsGroup group)
         {
-            //  Any heading of data TYPE 'Record Link' included in a data file shall cross-reference to the KEY FIELDs
-            //  of data rows in the GROUP referred to by the heading contents.
-
             var errorIds = _errors.Select(e => e.RuleId);
 
             if (errorIds.Contains("11a") == false || errorIds.Contains("11b") == false)
                 return;
 
-            var rlColumns = group.Columns.ByType(DataType.RL);
+            var rlColumns = group.ColumnsByType(DataType.RL);
 
             if (rlColumns is null)
                 return;
 
             AgsGroup tranGroup = _ags["TRAN"];
-            string delimiter = tranGroup["TRAN_DLIM"].Data.FirstOrDefault();
-            string concatenator = tranGroup["TRAN_RCON"].Data.FirstOrDefault();
+            string delimiter = tranGroup["TRAN_DLIM"][0].ToString();
+            string concatenator = tranGroup["TRAN_RCON"][0].ToString();
 
             foreach (var rlColumn in rlColumns)
             {
-                for (int i = 0; i < rlColumn.Data.Count; i++)
+                string colRef = rlColumn.Heading;
+
+                foreach (var row in group.Rows)
                 {
                     List<string> recordLinks = new();
 
-                    if (rlColumn.Data[i].Contains(concatenator))
-                        recordLinks.AddRange(rlColumn.Data[i].Split(concatenator));
+                    if (row.Contains(colRef, concatenator))
+                        recordLinks.AddRange(row[colRef].ToString().Split(concatenator));
 
                     else
-                        recordLinks.Add(rlColumn.Data[i]);
+                        recordLinks.Add(row[colRef].ToString());
 
                     for (int j = 0; j < recordLinks.Count; j++)
                     {
                         string linkedGroupName = recordLinks[j].Split(delimiter).First();
 
-                        var linkedGroupRecords = _ags[linkedGroupName].Columns.ByStatus(Status.KEY).ReturnRows(delimiter);
+                        var linkedGroupRecords = _ags[linkedGroupName].ColumnsByStatus(Status.KEY).DelimitedKeyRows(delimiter);
 
-                        if (rlColumn.Data[i].Contains(delimiter) == false)
+                        if (row.Contains(colRef, delimiter) == false)
                         {
                             _errors.Add(new RuleError()
                             {
                                 Status = "Fail",
                                 RuleId = "11c",
                                 Group = group.Name,
-                                RowNumber = group.FirstDataRow,
-                                Message = $"Invalid record link: \"{rlColumn.Data[i]}\", \"{delimiter}\" should be used as delimiter.",
+                                RowNumber = row.Index,
+                                Message = $"Invalid record link: \"{row[colRef]}\", \"{delimiter}\" should be used as delimiter.",
                             });
                             continue;
                         }
 
-                        int count = linkedGroupRecords.Count(l => l.Contains(rlColumn.Data[i][4..]));
+                        int count = linkedGroupRecords.Count(l => l.Contains(row[colRef].ToString()[4..]));
 
                         if (count == 0)
                         {
@@ -487,8 +549,8 @@ namespace AgsVerifierLibrary.Rules
                                 Status = "Fail",
                                 RuleId = "11c",
                                 Group = group.Name,
-                                RowNumber = group.FirstDataRow + i,
-                                Message = $"Invalid record link: \"{rlColumn.Data[i]}\". No such record found.",
+                                RowNumber = row.Index,
+                                Message = $"Invalid record link: \"{row[colRef]}\". No such record found.",
                             });
                             continue;
                         }
@@ -500,13 +562,13 @@ namespace AgsVerifierLibrary.Rules
                                 Status = "Fail",
                                 RuleId = "11c",
                                 Group = group.Name,
-                                RowNumber = group.FirstDataRow + i,
-                                Message = $"Invalid record link: \"{rlColumn.Data[i]}\". Link refers to more than one record.",
+                                RowNumber = row.Index,
+                                Message = $"Invalid record link: \"{row[colRef]}\". Link refers to more than one record.",
                             });
                             continue;
                         }
 
-                        var splitRecordLink = recordLinks[i].Split(delimiter);
+                        var splitRecordLink = recordLinks[row.Index].Split(delimiter);
                         AgsGroup linkedGroup = _ags[splitRecordLink[0]];
 
                         if (linkedGroup is null)
@@ -516,8 +578,8 @@ namespace AgsVerifierLibrary.Rules
                                 Status = "Fail",
                                 RuleId = "11",
                                 Group = group.Name,
-                                RowNumber = group.FirstDataRow + i,
-                                Message = $"Invalid record link: \"{rlColumn.Data[i]}\". Link refers to group \"{splitRecordLink[0]}\" which was not found.",
+                                RowNumber = row.Index,
+                                Message = $"Invalid record link: \"{row[colRef]}\". Link refers to group \"{splitRecordLink[0]}\" which was not found.",
                             });
                             continue;
                         }
@@ -531,8 +593,8 @@ namespace AgsVerifierLibrary.Rules
                                 Status = "Fail",
                                 RuleId = "11",
                                 Group = group.Name,
-                                RowNumber = group.FirstDataRow + i,
-                                Message = $"Invalid record link: \"{rlColumn.Data[i]}\". Link reference has too many delimited values compared to the number of cross-reference group KEY fields.",
+                                RowNumber = row.Index,
+                                Message = $"Invalid record link: \"{row[colRef]}\". Link reference has too many delimited values compared to the number of cross-reference group KEY fields.",
                             });
                         }
 
@@ -543,8 +605,8 @@ namespace AgsVerifierLibrary.Rules
                                 Status = "Fail",
                                 RuleId = "11",
                                 Group = group.Name,
-                                RowNumber = group.FirstDataRow + i,
-                                Message = $"Invalid record link: \"{rlColumn.Data[i]}\". Link reference has too few delimited values compared to the number of cross-reference group KEY fields.",
+                                RowNumber = row.Index,
+                                Message = $"Invalid record link: \"{row[colRef]}\". Link reference has too few delimited values compared to the number of cross-reference group KEY fields.",
                             });
                         }
                     }
@@ -552,12 +614,19 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
+        /// <summary>
+        /// Data does not have to be included against each HEADING unless REQUIRED(Rule 10b). The data FIELD can be null;
+        /// a null entry is defined as ""(two quotes together).
+        /// </summary>
         private void Rule12()
         {
-            // Data does not have to be included against each HEADING unless REQUIRED(Rule 10b). The data FIELD can be null;
-            // a null entry is defined as ""(two quotes together).
+
         }
 
+        /// <summary>
+        /// Each data file shall contain the PROJ GROUP which shall contain only one data row and, as a minimum, 
+        /// shall contain data under the headings defined as REQUIRED (Rule 10b).
+        /// </summary>
         private void Rule13()
         {
             AgsGroup projGroup = _ags["PROJ"];
@@ -571,8 +640,8 @@ namespace AgsVerifierLibrary.Rules
                 {
                     Status = "Fail",
                     RuleId = "13",
-                    RowNumber = projGroup.GroupRow,
                     Group = projGroup.Name,
+                    RowNumber = projGroup.GroupRow,
                     Message = "There should be at least one DATA row in the PROJ table.",
                 });
             }
@@ -583,8 +652,8 @@ namespace AgsVerifierLibrary.Rules
                 {
                     Status = "Fail",
                     RuleId = "13",
-                    RowNumber = projGroup.GroupRow,
                     Group = projGroup.Name,
+                    RowNumber = projGroup.GroupRow,
                     Message = "There should not be more than one DATA row in the PROJ table.",
                 });
             }
@@ -593,12 +662,16 @@ namespace AgsVerifierLibrary.Rules
             {
                 Status = "Fail",
                 RuleId = "13",
-                RowNumber = projGroup.FirstDataRow,
                 Group = projGroup.Name,
+                RowNumber = projGroup.Rows[0].Index,
                 Message = "Each AGS data file shall contain the PROJ GROUP.",
             });
         }
 
+        /// <summary>
+        /// Each data file shall contain the TRAN GROUP which shall contain only one data row and, 
+        /// as a minimum, shall contain data under the headings defined as REQUIRED (Rule 10b).
+        /// </summary>
         private void Rule14()
         {
             AgsGroup tranGroup = _ags["TRAN"];
@@ -609,7 +682,6 @@ namespace AgsVerifierLibrary.Rules
                 {
                     Status = "Fail",
                     RuleId = "14",
-                    RowNumber = tranGroup.FirstDataRow,
                     Group = tranGroup.Name,
                     Message = "Each AGS data file shall contain the TRAN GROUP.",
                 });
@@ -636,19 +708,20 @@ namespace AgsVerifierLibrary.Rules
                 {
                     Status = "Fail",
                     RuleId = "14",
-                    RowNumber = tranGroup.FirstDataRow,
+                    RowNumber = tranGroup.Rows[0].Index,
                     Group = tranGroup.Name,
                     Message = "There should not be more than one DATA row in the TRAN table.",
                 });
             }
         }
 
+        /// <summary>
+        ///  Each data file shall contain the UNIT GROUP to list all units used within the data file.
+        ///  Every unit of measurement entered in the UNIT row of a GROUP or data entered in a FIELD where the field TYPE
+        ///  is defined as "PU"(for example ELRG_RUNI, GCHM_UNIT or MOND_UNIT FIELDs) shall be listed and defined in the UNIT GROUP.
+        /// </summary>
         private void Rule15()
         {
-            //  Each data file shall contain the UNIT GROUP to list all units used within the data file.
-            //  Every unit of measurement entered in the UNIT row of a GROUP or data entered in a FIELD where the field TYPE
-            //  is defined as "PU"(for example ELRG_RUNI, GCHM_UNIT or MOND_UNIT FIELDs) shall be listed and defined in the UNIT GROUP.
-
             AgsGroup unitGroup = _ags["UNIT"];
 
             if (unitGroup is null)
@@ -662,8 +735,8 @@ namespace AgsVerifierLibrary.Rules
                 });
             }
 
-            var allGroupUnits = _ags.Groups.ReturnAllUnits().Distinct();
-            var allPuTypeColumnData = _ags.Groups.GetAllColumnsOfType(DataType.PU).MergeData().Distinct();
+            var allGroupUnits = _ags.ReturnAllUnits().Distinct();
+            var allPuTypeColumnData = _ags.GetAllColumnsOfType(DataType.PU).MergeData().Distinct();
             var mergedUnits = allGroupUnits.Concat(allPuTypeColumnData);
 
             var unitUnits = unitGroup["UNIT_UNIT"].Data;
@@ -683,14 +756,15 @@ namespace AgsVerifierLibrary.Rules
             });
         }
 
+        /// <summary>
+        ///  Each data file shall contain the ABBR GROUP when abbreviations have been included in the data file.
+        ///  The abbreviations listed in the ABBR GROUP shall include definitions for all abbreviations entered
+        ///  in a FIELD where the data TYPE is defined as "PA" or any abbreviation needing definition used within
+        ///  any other heading data type.
+        /// </summary>
         private void Rule16()
         {
-            //  Each data file shall contain the ABBR GROUP when abbreviations have been included in the data file.
-            //  The abbreviations listed in the ABBR GROUP shall include definitions for all abbreviations entered
-            //  in a FIELD where the data TYPE is defined as "PA" or any abbreviation needing definition used within
-            //  any other heading data type.
-
-            var allPaTypeColumns = _ags.Groups.GetAllColumnsOfType(DataType.PA);
+            var allPaTypeColumns = _ags.GetAllColumnsOfType(DataType.PA);
 
             if (allPaTypeColumns is null)
                 return;
@@ -722,19 +796,22 @@ namespace AgsVerifierLibrary.Rules
                         RuleId = "16",
                         Group = "ABBR",
                         Field = paTypeColumn.Heading,
-                        Message = $"\"{missingAbbrCode}\" under {paTypeColumn.Heading} in {paTypeColumn.PartOfGroup} not found in ABBR table",
+                        RowNumber = abbrGroup.GroupRow,
+                        Message = $"\"{missingAbbrCode}\" under {paTypeColumn.Heading} in {paTypeColumn.MemberOf} not found in ABBR table",
                     });
                 }
             }
         }
 
+        // TO FINISH
+        /// <summary>
+        ///  Where multiple abbreviations are required to fully codify a FIELD, the abbreviations shall be separated by a defined
+        ///  concatenation character. This single concatenation character shall be defined in TRAN_RCON. The default being "+"
+        ///  (ASCII character 43). Each abbreviation used in such combinations shall be listed separately in the ABBR GROUP.
+        ///  e.g. "CP+RC" must have entries for both "CP" and "RC" in ABBR GROUP, together with their full definition.
+        /// </summary>
         private void Rule16a()
         {
-            //  Where multiple abbreviations are required to fully codify a FIELD, the abbreviations shall be separated by a defined
-            //  concatenation character. This single concatenation character shall be defined in TRAN_RCON. The default being "+"
-            //  (ASCII character 43). Each abbreviation used in such combinations shall be listed separately in the ABBR GROUP.
-            //  e.g. "CP+RC" must have entries for both "CP" and "RC" in ABBR GROUP, together with their full definition.
-
             var raisedErrorIds = _errors.Select(e => e.RuleId);
 
             if (raisedErrorIds.Contains("14"))
@@ -742,16 +819,15 @@ namespace AgsVerifierLibrary.Rules
 
             AgsGroup tranGroup = _ags["TRAN"];
 
-
             AgsColumn tranRconColumn = tranGroup["TRAN_RCON"];
-
-
         }
 
+        /// <summary>
+        /// Each data file shall contain the TYPE GROUP to define the field TYPEs used within the data file.
+        /// Every data type entered in the TYPE row of a GROUP shall be listed and defined in the TYPE GROUP.
+        /// </summary>
         private void Rule17()
         {
-            //Each data file shall contain the TYPE GROUP to define the field TYPEs used within the data file.
-            //Every data type entered in the TYPE row of a GROUP shall be listed and defined in the TYPE GROUP.
             AgsGroup typeGroup = _ags["TYPE"];
 
             if (typeGroup is null)
@@ -766,9 +842,9 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            var typeColumns = _ags.Groups.Select(g => g.Columns.Select(t => t.Type)).SelectMany(i => i).Distinct();
+            var allTypesInFile = _ags.ReturnAllTypes().Distinct();
 
-            foreach (var typeColumn in typeColumns)
+            foreach (var typeColumn in allTypesInFile)
             {
                 if (_ags["TYPE"]["TYPE_TYPE"].Data.Contains(typeColumn) || typeColumn == "TYPE")
                     continue;
@@ -778,11 +854,16 @@ namespace AgsVerifierLibrary.Rules
                     Status = "Fail",
                     RuleId = "17",
                     Group = "TYPE",
+                    RowNumber = typeGroup.GroupRow,
                     Message = $"Data type {typeColumn} not found in TYPE table.",
                 });
             }
         }
 
+        /// <summary>
+        /// Each data file shall contain the DICT GROUP where non-standard GROUP and HEADING names have been 
+        /// included in the data file.
+        /// </summary>
         private void Rule18()
         {
             if (_ags["DICT"] is null)
@@ -797,13 +878,14 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
+        /// <summary>
+        /// The order in which the user - defined HEADINGs are listed in the DICT GROUP shall define the order in which these HEADINGS
+        /// are appended to an existing GROUP or appear in a user-defined GROUP.
+        /// This order also defines the sequence in which such HEADINGS are used in a heading of data TYPE 'Record Link'(Rule 11).
+        /// </summary>
         private void Rule18a(AgsGroup group)
         {
-            // The order in which the user - defined HEADINGs are listed in the DICT GROUP shall define the order in which these HEADINGS
-            // are appended to an existing GROUP or appear in a user-defined GROUP.
-            // This order also defines the sequence in which such HEADINGS are used in a heading of data TYPE 'Record Link'(Rule 11).
-
-            var dictHeadings = _ags["DICT"].GetRowsByFilter("DICT_GRP", group.Name).ReturnAllValuesOf("DICT_HDNG");
+            var dictHeadings = _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).ReturnAllValuesOf("DICT_HDNG");
             var groupHeadings = group.Columns.Select(c => c.Heading).ToList();
 
             var intersectDictWithFile = dictHeadings.Intersect(groupHeadings).ToArray();
@@ -829,6 +911,9 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
+        /// <summary>
+        /// A GROUP name shall not be more than 4 characters long and shall consist of uppercase letters and numbers only.
+        /// </summary>
         private void Rule19(AgsGroup group)
         {
             if (group.Name.Length == 4 && group.Name.All(c => char.IsUpper(c)))
@@ -845,6 +930,10 @@ namespace AgsVerifierLibrary.Rules
             );
         }
 
+        /// <summary>
+        /// A HEADING name shall not be more than 9 characters long and shall consist of uppercase letters, numbers 
+        /// or the underscore character only.
+        /// </summary>
         private void Rule19a(AgsGroup group)
         {
             var headings = group.Columns.Where(c => c.Heading != "HEADING").Select(c => c.Heading);
@@ -895,13 +984,14 @@ namespace AgsVerifierLibrary.Rules
             );
         }
 
+        /// <summary>
+        /// HEADING names shall start with the GROUP name followed by an underscore character.e.g. "NGRP_HED1"
+        /// Where a HEADING refers to an existing HEADING within another GROUP, the HEADING name added to the group shall bear the same name. e.g.
+        /// "CMPG_TESN" in the "CMPT" GROUP.
+        /// </summary>
         private void Rule19b(AgsGroup group)
         {
-            //  HEADING names shall start with the GROUP name followed by an underscore character.e.g. "NGRP_HED1"
-            //  Where a HEADING refers to an existing HEADING within another GROUP, the HEADING name added to the group shall bear the same name. e.g.
-            //  "CMPG_TESN" in the "CMPT" GROUP.
-
-            var headings = group.Columns.Where(c => c.Heading != "HEADING").Select(c => c.Heading);
+            var headings = group.ReturnDescriptor(Descriptor.HEADING);
 
             foreach (var heading in headings)
             {
@@ -934,7 +1024,7 @@ namespace AgsVerifierLibrary.Rules
                             Field = heading,
                             Message = $"Heading {heading} should consist of a 4 character group name and a field name of up to 4 characters.",
                         });
-                    continue;
+                    //continue;
                 }
 
                 string[] exclusions = new string[] { "SPEC", "TEST" };
@@ -942,10 +1032,10 @@ namespace AgsVerifierLibrary.Rules
                 if (exclusions.Contains(splitHeading[0]))
                     continue;
 
-                var stdGroupDictRows = _stdDictionary["DICT"].GetRowsByFilter("DICT_TYPE", Descriptor.GROUP).ReturnAllValuesOf("DICT_GRP");
+                var stdGroupDictRows = _stdDictionary["DICT"]["DICT_TYPE"].FilterRowsBy(Descriptor.GROUP).ReturnAllValuesOf("DICT_GRP");
                 var rootGroup = _ags[splitHeading[0]];
 
-                if (stdGroupDictRows.Contains(splitHeading[0]) && rootGroup is null)
+                if (stdGroupDictRows.Contains(splitHeading[0]) == false && rootGroup is null)
                 {
                     _errors.Add(
                         new RuleError()
@@ -957,7 +1047,7 @@ namespace AgsVerifierLibrary.Rules
                             Field = heading,
                             Message = $"Group {splitHeading[0]} referred to in {heading} could not be found in either the standard dictionary or the DICT table.",
                         });
-                    continue;
+                    //continue;
                 }
 
                 var stdDictHeadings = _stdDictionary["DICT"]?["DICT_HDNG"].Data;
@@ -980,15 +1070,17 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
+        // TODO edit so for loop with i uses rows... maybe getgroups with headings ...
+        /// <summary>
+        /// Additional computer files (e.g. digital images) can be included within a data submission. Each such file shall be defined in a FILE GROUP.
+        /// The additional files shall be transferred in a sub-folder named FILE. This FILE sub - folder shall contain additional sub-folders each
+        /// named by the FILE_FSET reference. Each FILE_FSET named folder will contain the files listed in the FILE GROUP.
+        /// </summary>
         private void Rule20()
         {
-            // Additional computer files (e.g. digital images) can be included within a data submission. Each such file shall be defined in a FILE GROUP.
-            // The additional files shall be transferred in a sub-folder named FILE. This FILE sub - folder shall contain additional sub-folders each
-            // named by the FILE_FSET reference. Each FILE_FSET named folder will contain the files listed in the FILE GROUP.
-
             AgsGroup fileGroup = _ags["FILE"];
 
-            var fSetColumns = _ags.Groups.GetAllColumnsOfHeading("FILE_FSET", "FILE");
+            var fSetColumns = _ags.GetAllColumnsOfHeading("FILE_FSET", "FILE");
 
             var anyFsetEntries = fSetColumns.Any(c => c.AllNull == false);
 
@@ -1022,8 +1114,8 @@ namespace AgsVerifierLibrary.Rules
                     {
                         Status = "Fail",
                         RuleId = "20",
-                        Group = fSetColumn.PartOfGroup,
-                        RowNumber = _ags[fSetColumn.PartOfGroup].FirstDataRow + i,
+                        Group = fSetColumn.MemberOf,
+                        RowNumber = _ags[fSetColumn.MemberOf].Rows[i].Index,
                         Message = $"FILE_FSET entry \"{fSetColumn.Data[i]}\" not found in FILE table.",
                     });
                 }
@@ -1060,19 +1152,23 @@ namespace AgsVerifierLibrary.Rules
 
             var fileGroupFileNames = fileGroup["FILE_NAME"].ReturnDataDistinctNonBlank();
             var subFolderFiles = Directory.GetDirectories(fileFolderPath).SelectMany(d => Directory.GetFiles(d).Select(f => Path.GetFileName(f)));
-            var refDict = fileGroup.GetRows();
 
-            fileGroupFileNames.Except(subFolderFiles).ToList().ForEach(missingSubFile =>
+            var missingFilesMask = fileGroupFileNames.Except(subFolderFiles);
+
+            var missingSubFiles = fileGroup.Filter("FILE_NAME", missingFilesMask);
+
+            var test = fileGroup["FILE_NAME"].FilterRowsBy("EM-4m3_ML052");
+
+            foreach (var missingSubFile in missingSubFiles)
             {
-                var temp = refDict.AndBy("FILE_NAME", missingSubFile).ReturnFirstValueOf("FILE_FSET");
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
                     RuleId = "20",
                     Group = "FILE",
-                    Message = $"File named \"{Path.Combine("FILE", temp, missingSubFile)}\" not found even though it is defined in the FILE table.",
+                    Message = $"File named \"{Path.Combine("FILE", missingSubFile["FILE_FSET"].ToString(), missingSubFile["FILE_NAME"].ToString())}\" not found even though it is defined in the FILE table.",
                 });
-            });
+            };
         }
     }
 }

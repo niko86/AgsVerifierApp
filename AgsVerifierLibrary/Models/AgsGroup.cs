@@ -7,7 +7,9 @@ namespace AgsVerifierLibrary.Models
     {
         public AgsGroup()
         {
-
+            Columns = new(); // Don't remove
+            AgsColumn indexColumn = AddColumn();
+            indexColumn.Heading = "Index";
         }
 
         public string Name { get; set; }
@@ -15,9 +17,8 @@ namespace AgsVerifierLibrary.Models
         public int HeadingRow { get; set; }
         public int UnitRow { get; set; }
         public int TypeRow { get; set; }
-        public int FirstDataRow { get; set; }
         public string ParentGroup { get; set; }
-        public List<AgsColumn> Columns { get; set; }
+        public List<AgsColumn> Columns { get; private set; }
 
         public int RowCount => Columns[0].Data.Count;
 
@@ -33,6 +34,11 @@ namespace AgsVerifierLibrary.Models
             }
         }
 
+        public IEnumerable<AgsRow> Filter(string key, IEnumerable<dynamic> filters)
+        {
+            return Rows.Where(r => filters.Contains(r[key]));
+        }
+
         public AgsColumn this[int columnIndex]
         {
             get => Columns[columnIndex];
@@ -45,6 +51,11 @@ namespace AgsVerifierLibrary.Models
             set => Columns[Columns.FindIndex(c => c.Heading == columnName)] = value;
         }
 
-
+        public AgsColumn AddColumn()
+        {
+            var col = new AgsColumn(this);
+            Columns.Add(col);
+            return col;
+        }
     }
 }
