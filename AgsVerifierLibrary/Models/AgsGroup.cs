@@ -17,7 +17,7 @@ namespace AgsVerifierLibrary.Models
         public int HeadingRow { get; set; }
         public int UnitRow { get; set; }
         public int TypeRow { get; set; }
-        public string ParentGroup { get; set; }
+        public AgsGroup ParentGroup { get; set; }
         public List<AgsColumn> Columns { get; private set; }
 
         public int RowCount => Columns[0].Data.Count;

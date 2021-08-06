@@ -1,4 +1,6 @@
-﻿namespace AgsVerifierLibrary.Models
+﻿using System;
+
+namespace AgsVerifierLibrary.Models
 {
 	public class RuleError
 	{

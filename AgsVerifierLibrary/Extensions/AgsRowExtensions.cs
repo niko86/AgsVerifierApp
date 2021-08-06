@@ -19,7 +19,7 @@ namespace AgsVerifierLibrary.Extensions
         public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, Descriptor descriptor)
         {
             return rows
-                .Where(d => (string) d[key] == descriptor.Name());
+                .Where(d => (string)d[key] == descriptor.Name());
         }
 
         public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, Status status)
@@ -30,15 +30,15 @@ namespace AgsVerifierLibrary.Extensions
 
         public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, int filter)
         {
-            return rows.Where(d => (int) d[key] == filter);
+            return rows.Where(d => (int)d[key] == filter);
         }
 
-        public static string ReturnFirstValueOf(this IEnumerable<AgsRow> rows, string key)
+        public static string FirstOf(this IEnumerable<AgsRow> rows, string key)
         {
-            return (string) rows?.FirstOrDefault()?[key];
+            return (string)rows?.FirstOrDefault()?[key];
         }
 
-        public static IEnumerable<dynamic> ReturnAllValuesOf(this IEnumerable<AgsRow> rows, string key)
+        public static IEnumerable<dynamic> AllOf(this IEnumerable<AgsRow> rows, string key)
         {
             return rows?.Select(d => d[key]);
         }
@@ -51,7 +51,7 @@ namespace AgsVerifierLibrary.Extensions
         public static string ToStringByStatus(this AgsRow row, Status status)
         {
             // Using reflection to keep logic out of Row model
-            AgsGroup group = (AgsGroup) _groupField.GetValue(row);
+            AgsGroup group = (AgsGroup)_groupField.GetValue(row);
 
             if (status is Status.KEY)
             {
@@ -79,6 +79,25 @@ namespace AgsVerifierLibrary.Extensions
             }
 
             return row.ToString();
+        }
+
+        public static string ToStringByMask(this AgsRow row, IEnumerable<string> mask)
+        {
+            List<string> temp = new();
+
+            foreach (var item in mask)
+            {
+                try
+                {
+                    temp.Add(row[item].ToString());
+                }
+                catch (Exception)
+                {
+                    //TODO 
+                    throw;
+                }
+            }
+            return string.Join('|', temp);
         }
     }
 }

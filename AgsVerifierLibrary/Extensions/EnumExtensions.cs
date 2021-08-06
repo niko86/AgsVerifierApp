@@ -16,7 +16,7 @@ namespace AgsVerifierLibrary.Extensions
                 .GetCustomAttribute<DisplayAttribute>()?
                 .GetName();
 
-            if (String.IsNullOrEmpty(displayName))
+            if (string.IsNullOrEmpty(displayName))
             {
                 displayName = enumValue.ToString();
             }

@@ -14,6 +14,8 @@ namespace AgsVerifierLibrary.Actions
 {
     public class ProcessAgsFile
     {
+        private static readonly string[] _parentGroupExceptions = new string[] { "PROJ", "TRAN", "ABBR", "DICT", "UNIT", "TYPE", "LOCA", "FILE", "LBSG", "PREM", "STND" };
+
         private readonly AgsContainer _ags;
         private readonly List<RuleError> _ruleErrors;
         private readonly AgsContainer _stdDictionary;
@@ -141,7 +143,7 @@ namespace AgsVerifierLibrary.Actions
             }
         }
 
-        private void FinalAssignments()
+        public void FinalAssignments()
         {
             foreach (var group in _ags.Groups)
             {
@@ -150,23 +152,20 @@ namespace AgsVerifierLibrary.Actions
                     AssignParentGroup(group);
                     AssignStatuses(group);
                 }
-
-                AddIndexColumn(group);
             }
-        }
-
-        private void AddIndexColumn(AgsGroup group)
-        {
-            //AgsColumn indexColumn = new();
-
-
         }
 
         private void AssignParentGroup(AgsGroup group)
         {
-            group.ParentGroup = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", Descriptor.GROUP).ReturnFirstValueOf("DICT_PGRP")
-                ?? _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", Descriptor.GROUP).ReturnFirstValueOf("DICT_PGRP")
+            if (_parentGroupExceptions.Contains(group.Name))
+                return;
+
+            string parentGroupName = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", Descriptor.GROUP).FirstOf("DICT_PGRP")
+                ?? _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", Descriptor.GROUP).FirstOf("DICT_PGRP")
                 ?? string.Empty;
+
+            if (parentGroupName is not "")
+                group.ParentGroup = _ags[parentGroupName];
         }
 
         private void AssignStatuses(AgsGroup group)
@@ -176,8 +175,8 @@ namespace AgsVerifierLibrary.Actions
                 if (column.Heading == "Index" || column.Heading == "HEADING")
                     continue;
                     
-                column.Status = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_HDNG", column.Heading).ReturnFirstValueOf("DICT_STAT")
-                    ?? _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_HDNG", column.Heading).ReturnFirstValueOf("DICT_STAT")
+                column.Status = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_HDNG", column.Heading).FirstOf("DICT_STAT")
+                    ?? _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_HDNG", column.Heading).FirstOf("DICT_STAT")
                     ?? string.Empty;
             }
         }

@@ -1,7 +1,9 @@
 ﻿using AgsVerifierLibrary.Actions;
+using AgsVerifierLibrary.Comparers;
 using AgsVerifierLibrary.Models;
 using AgsVerifierLibrary.Rules;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AgsVerifierLibrary
 {
@@ -32,7 +34,7 @@ namespace AgsVerifierLibrary
             GroupBasedRules groupRules = new(_ags, _ruleErrors, _stdDictionary);
             groupRules.CheckGroups();
 
-            foreach (var error in _ruleErrors)
+            foreach (var error in _ruleErrors.OrderBy(e => e, new RuleErrorSort()))
             {
                 System.Console.WriteLine($"{error.RuleId} - {error.Group} - {error.Message}");
             }

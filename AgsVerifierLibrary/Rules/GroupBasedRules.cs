@@ -138,7 +138,7 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule7(AgsGroup group)
         {
-            var dictHeadings = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", Descriptor.HEADING).ReturnAllValuesOf("DICT_HDNG");
+            var dictHeadings = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", Descriptor.HEADING).AllOf("DICT_HDNG");
             var groupHeadings = group.Columns.Select(c => c.Heading);
 
             var intersectDictWithFile = dictHeadings.Intersect(groupHeadings).ToArray();
@@ -190,8 +190,8 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            var stdDictTableHeadings = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).ReturnAllValuesOf("DICT_HDNG");
-            var fileDictTableHeadings = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).ReturnAllValuesOf("DICT_HDNG");
+            var stdDictTableHeadings = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).AllOf("DICT_HDNG");
+            var fileDictTableHeadings = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).AllOf("DICT_HDNG");
 
             var combinedDictTableHeadings = stdDictTableHeadings.Concat(fileDictTableHeadings).Distinct();
 
@@ -235,7 +235,7 @@ namespace AgsVerifierLibrary.Rules
 
             var keyHeadings = keyColumns.ReturnDescriptor(Descriptor.HEADING);
 
-            var dictKeyHeadings = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_STAT", Status.KEY).ReturnAllValuesOf("DICT_HDNG");
+            var dictKeyHeadings = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_STAT", Status.KEY).AllOf("DICT_HDNG");
 
             var differences = dictKeyHeadings.Except(keyHeadings);
 
@@ -312,7 +312,6 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
-        // TODO
         /// <summary>
         /// Links are made between data rows in GROUPs by the KEY fields.
         /// Every entry made in the KEY fields in any GROUP must have an equivalent entry in its PARENT GROUP.
@@ -320,12 +319,10 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule10c(AgsGroup group)
         {
-            if (_parentGroupExceptions.Contains(group.Name))
+            if (_parentGroupExceptions.Contains(group.Name)) // TODO work out how to indicate exceptions within parent group model ref??
                 return; 
 
-            string parentGroupName = group.ParentGroup;
-
-            if (parentGroupName == string.Empty)
+            if (group.ParentGroup is null)
             {
                 _errors.Add(new RuleError()
                 {
@@ -338,7 +335,7 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            if (_ags.ReturnGroupNames().Contains(parentGroupName) == false)
+            if (_ags.ReturnGroupNames().Contains(group.ParentGroup.Name) == false)
             {
                 _errors.Add(new RuleError()
                 {
@@ -346,14 +343,14 @@ namespace AgsVerifierLibrary.Rules
                     RuleId = "10c",
                     Group = group.Name,
                     RowNumber = group.GroupRow,
-                    Message = $"Could not find parent group {parentGroupName}.",
+                    Message = $"Could not find parent group {group.ParentGroup.Name}.",
                 });
                 return;
             }
 
-            var parentDictKeyHeadings = HelperFunctions.MergedDictColumnByStatus(_stdDictionary, _ags, Status.KEY, group.Name, "DICT_HDNG");
+            var parentKeyColumns = group.ParentGroup.GetColumnsOfStatus(Status.KEY);
 
-            if (parentDictKeyHeadings.Any() == false)
+            if (parentKeyColumns.Any() == false)
             {
                 _errors.Add(new RuleError()
                 {
@@ -366,45 +363,22 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            var childDictKeyHeadings = HelperFunctions.MergedDictColumnByStatus(_stdDictionary, _ags, Status.KEY, group.Name, "DICT_HDNG");
-
-            var test = group.GetColumnsOfStatus(Status.KEY); //.GetRows().First().ToString();
-
-            foreach (var childKeyHeading in childDictKeyHeadings)
+            foreach (var row in group.Rows)
             {
-
-            }
-
-            // SequenceEqual to compare two lists sequencing.
-
-            AgsGroup parentGroup = _ags[parentGroupName];
-
-            // TODO bug check as false positives coming through on LBST and SHBT
-            //Rule10c_missingKeys(parentGroup, mergedDictKeyHeadings, true);
-            //Rule10c_missingKeys(group, mergedDictKeyHeadings, false);
-
-            // TODO THIS NEEDS TO BE FOR DATA IN THE GROUP MUST HAVE ENTRY IN PARENT GROUP!!!!!!!!
-            // NEED FOR LOOP TO GO THROUGH CHILD Data for each column AND CHECK IF in parent data column 
-        }
-
-        private void Rule10c_missingKeys(AgsGroup group, List<string> keyHeadings, bool parent)
-        {
-            var groupKeyHeadings = group.ColumnsByStatus(Status.KEY).ReturnDescriptor(Descriptor.HEADING);
-
-            var missingKeyHeadings = keyHeadings.Except(groupKeyHeadings);
-
-            string parentChild = parent ? "parent" : "child";
-
-            if (missingKeyHeadings.Any())
-            {
-                _errors.Add(new RuleError()
+                foreach (var parentKeyColumn in parentKeyColumns)
                 {
-                    Status = "Fail",
-                    RuleId = "10c",
-                    Group = group.Name,
-                    RowNumber = group.HeadingRow,
-                    Message = $"Could not check KEY field entries due to missing key fields in {parentChild} group {group.Name}. Check error log under Rule 10a.",
-                });
+                    if (parentKeyColumn.Data.Contains(row[parentKeyColumn.Heading]) == false)
+                    {
+                        _errors.Add(new RuleError()
+                        {
+                            Status = "Fail",
+                            RuleId = "10c",
+                            Group = group.Name,
+                            RowNumber = row.Index,
+                            Message = $"Parent key entry for line not found in {group.ParentGroup.Name}: {row.ToStringByMask(parentKeyColumns.ReturnDescriptor(Descriptor.HEADING))}",
+                        });
+                    }
+                }
             }
         }
 
@@ -885,7 +859,7 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule18a(AgsGroup group)
         {
-            var dictHeadings = _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).ReturnAllValuesOf("DICT_HDNG");
+            var dictHeadings = _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AllOf("DICT_HDNG");
             var groupHeadings = group.Columns.Select(c => c.Heading).ToList();
 
             var intersectDictWithFile = dictHeadings.Intersect(groupHeadings).ToArray();
@@ -1032,7 +1006,7 @@ namespace AgsVerifierLibrary.Rules
                 if (exclusions.Contains(splitHeading[0]))
                     continue;
 
-                var stdGroupDictRows = _stdDictionary["DICT"]["DICT_TYPE"].FilterRowsBy(Descriptor.GROUP).ReturnAllValuesOf("DICT_GRP");
+                var stdGroupDictRows = _stdDictionary["DICT"]["DICT_TYPE"].FilterRowsBy(Descriptor.GROUP).AllOf("DICT_GRP");
                 var rootGroup = _ags[splitHeading[0]];
 
                 if (stdGroupDictRows.Contains(splitHeading[0]) == false && rootGroup is null)
