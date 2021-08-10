@@ -1,23 +1,15 @@
 ﻿using AgsVerifierLibrary;
-using AgsVerifierLibrary.Comparers;
 using AgsVerifierLibrary.Enums;
 using AgsVerifierLibrary.Extensions;
-using AgsVerifierLibrary.Models;
+using AgsVerifierWindowsGUI.Actions;
 using AgsVerifierWindowsGUI.Commands;
-using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
 using System.Windows;
 
 namespace AgsVerifierWindowsGUI.ViewModels
 {
     public class MainViewModel : BaseViewModel
     {
-        private List<RuleError> _errors;
-        private bool _processAgsSuccess;
+        private readonly DataAccess _dataAccess;
 
         public RelayCommand OpenFileDialogCommand { get; private set; }
         public RelayCommand ValidateAgsCommand { get; private set; }
@@ -26,6 +18,8 @@ namespace AgsVerifierWindowsGUI.ViewModels
 
         public MainViewModel()
         {
+            _dataAccess = new();
+
             OpenFileDialogCommand = new RelayCommand(OpenFileDialog);
             ValidateAgsCommand = new RelayCommand(ValidateAgs, CanValidateAgsRun);
             ExportValidationReportCommand = new RelayCommand(ExportValidationReport, CanExportValidationReport);
@@ -54,6 +48,17 @@ namespace AgsVerifierWindowsGUI.ViewModels
             }
         }
 
+        private bool _processAgsSuccess;
+        public bool ProcessAgsSuccess
+        {
+            get => _processAgsSuccess;
+            set
+            {
+                _processAgsSuccess = value;
+                OnPropertyChanged(nameof(ProcessAgsSuccess));
+            }
+        }
+
         private string _errorText;
         public string ErrorText
         {
@@ -67,50 +72,14 @@ namespace AgsVerifierWindowsGUI.ViewModels
 
         public void OpenFileDialog(object obj)
         {
-            OpenFileDialog dlg = new()
-            {
-                DefaultExt = ".ags",
-                Filter = "AGS Files (*.ags)|*.ags",
-                Multiselect = false,
-            };
-
-            InputFilePath = dlg.ShowDialog() == true && dlg.FileNames.Length > 0
-                ? dlg.FileName
-                : string.Empty;
+            InputFilePath = OpenFileDialogAction.Run();
         }
 
         public void ValidateAgs(object obj)
         {
-            DataAccess dataAccess = new();
+            ProcessAgsSuccess = _dataAccess.ValidateAgsFile(SelectedAgsVersion, InputFilePath);
 
-            _processAgsSuccess = dataAccess.ValidateAgsFile(SelectedAgsVersion, InputFilePath);
-            _errors = dataAccess.Errors;
-
-            StringBuilder sb = new();
-
-            var groupedErrors = _errors.OrderBy(i => i.RuleId).GroupBy(k => k.RuleName);
-
-            sb.AppendLine($"AGS validation report ");
-            sb.AppendLine($"File to be validated: {InputFilePath}");
-            sb.AppendLine($"Validation carried out using {SelectedAgsVersion.Name()}");
-            sb.AppendLine($"Started: {DateTime.Now:G}");
-            sb.AppendLine(new string('-', 140));
-
-            foreach (var groupedError in groupedErrors)
-            {
-                sb.AppendLine($"{groupedError.First().Status}: Rule {groupedError.First().RuleName}");
-
-                foreach (var error in groupedError)
-                {
-                    sb.AppendLine($"  Line {error.RowNumber}: {error.Message}");
-                }
-
-                sb.AppendLine();
-            }
-            sb.AppendLine(new string('-', 140));
-            sb.AppendLine($"Finished: {DateTime.Now:G}");
-
-            ErrorText = sb.ToString();
+            ErrorText = GenerateValidationReportAction.Run(_dataAccess.Errors, InputFilePath, SelectedAgsVersion.Name());
         }
 
         private bool CanValidateAgsRun(object obj)
@@ -120,31 +89,12 @@ namespace AgsVerifierWindowsGUI.ViewModels
 
         public void ExportValidationReport(object obj)
         {
-            SaveFileDialog dlg = new()
-            {
-                DefaultExt = ".txt",
-                Filter = "TXT Files (*.txt)|*.txt",
-            };
-
-            if (dlg.ShowDialog() == true && dlg.FileNames.Length > 0)
-            {
-                try
-                {
-                    File.WriteAllText(dlg.FileName, ErrorText);
-                    MessageBox.Show("Successfully exported validation report to text file", "Export to Validation Report", MessageBoxButton.OK, MessageBoxImage.None);
-                }
-                catch (Exception)
-                {
-                    MessageBox.Show("Failed to export validation report to text file", "Export to Validation Report", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-                
-            }
-
+            ExportValidationReportAction.Run(ErrorText);
         }
 
         private bool CanExportValidationReport(object obj)
         {
-            return _processAgsSuccess;
+            return ProcessAgsSuccess;
         }
 
         public void ExportAgsToExcel(object obj)
@@ -154,7 +104,7 @@ namespace AgsVerifierWindowsGUI.ViewModels
 
         private bool CanExportAgsToExcel(object obj)
         {
-            return _processAgsSuccess;
+            return ProcessAgsSuccess;
         }
     }
 }
