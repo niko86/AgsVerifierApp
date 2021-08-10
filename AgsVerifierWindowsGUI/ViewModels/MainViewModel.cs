@@ -99,7 +99,7 @@ namespace AgsVerifierWindowsGUI.ViewModels
 
         public void ExportAgsToExcel(object obj)
         {
-            MessageBox.Show("Exported to Excel");
+            ExportAgsToExcelAction.Run(_dataAccess.Ags);
         }
 
         private bool CanExportAgsToExcel(object obj)

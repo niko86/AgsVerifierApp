@@ -64,9 +64,7 @@ namespace AgsVerifierLibrary.Extensions
                 .FirstOrDefault(p => p.Name
                     .Contains(descriptor.Name(), StringComparison.InvariantCultureIgnoreCase));
 
-            var output = group.Columns.Select(x => propertyInfo.GetValue(x).ToString());
-
-            return output.Where(x => !exclusions.Contains(x));
+            return group.Columns.Where(g => !exclusions.Contains(g.Heading)).Select(x => propertyInfo.GetValue(x).ToString());
         }
     }
 }

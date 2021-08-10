@@ -10,17 +10,15 @@ namespace AgsVerifierLibrary
 {
     public class DataAccess
     {
-        private readonly AgsContainer _ags;
-        private readonly List<RuleError> _errors;
-        private readonly AgsContainer _stdDictionary;
-
-        public List<RuleError> Errors => _errors;
+        public AgsContainer Ags { get; private set; }
+        public List<RuleError> Errors { get; private set; }
+        public AgsContainer StdDictionary { get; private set; }
 
         public DataAccess()
         {
-            _ags = new AgsContainer();
-            _errors = new List<RuleError>();
-            _stdDictionary = new AgsContainer();
+            Ags = new AgsContainer();
+            Errors = new List<RuleError>();
+            StdDictionary = new AgsContainer();
         }
 
         public bool ValidateAgsFile(AgsVersion version, string filePath)
@@ -29,11 +27,11 @@ namespace AgsVerifierLibrary
             // TODO AGS 4.0.4 do i need to check types if exist in std dictionary?
             try
             {
-                _ags.FilePath = filePath;
+                Ags.FilePath = filePath;
 
-                _ = new ProcessAgsFile(version, _stdDictionary);
-                _ = new ProcessAgsFile(version, _ags, _errors, _stdDictionary);
-                _ = new GroupBasedRules(_ags, _errors, _stdDictionary);
+                _ = new ProcessAgsFile(version, StdDictionary);
+                _ = new ProcessAgsFile(version, Ags, Errors, StdDictionary);
+                _ = new GroupBasedRules(Ags, Errors, StdDictionary);
 
                 return true;
             }
