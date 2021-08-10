@@ -1,5 +1,7 @@
-﻿using AgsVerifierLibrary.Extensions;
+﻿using AgsVerifierLibrary.Enums;
+using AgsVerifierLibrary.Extensions;
 using AgsVerifierLibrary.Models;
+using AgsVerifierLibrary.Properties;
 using AgsVerifierLibrary.Rules;
 using CsvHelper;
 using CsvHelper.Configuration;
@@ -8,7 +10,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using static AgsVerifierLibrary.Models.AgsEnum;
 
 namespace AgsVerifierLibrary.Actions
 {
@@ -21,24 +22,28 @@ namespace AgsVerifierLibrary.Actions
         private readonly AgsContainer _stdDictionary;
         private AgsGroup _currentGroup;
 
-        public ProcessAgsFile(AgsContainer ags, List<RuleError> ruleErrors = null, AgsContainer stdDictionary = null)
+        public ProcessAgsFile(AgsVersion version, AgsContainer ags, List<RuleError> ruleErrors = null, AgsContainer stdDictionary = null)
         {
             _ags = ags;
             _ruleErrors = ruleErrors;
             _stdDictionary = stdDictionary;
+
+            Process(version);
         }
 
-        public void Process()
+        private void Process(AgsVersion version)
         {
-            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
+            CsvConfiguration csvConfig = new(CultureInfo.InvariantCulture)
             {
                 IgnoreBlankLines = false,
                 Delimiter = ",",
                 Quote = '"',
             };
 
-            using var reader = new StreamReader(_ags.FilePath);
-            using var csv = new CsvReader(reader, csvConfig);
+            using StreamReader reader = _stdDictionary is null
+                ? new(new MemoryStream(Resources.ResourceManager.GetObject(version.ToString(), CultureInfo.InvariantCulture) as byte[]))
+                : new(_ags.FilePath);
+            using CsvReader csv = new(reader, csvConfig);
             while (csv.Read())
             {
                 if (csv.Parser.RawRecord == Environment.NewLine)
@@ -61,9 +66,11 @@ namespace AgsVerifierLibrary.Actions
                     case "DATA":
                         ProcessDataRow(csv);
                         break;
+                    default:
+                        break;
                 }
 
-                if (_stdDictionary is not null) 
+                if (_stdDictionary is not null)
                     RowBasedRules.CheckRow(csv, _ruleErrors, _currentGroup);
             }
 
@@ -81,17 +88,17 @@ namespace AgsVerifierLibrary.Actions
 
         private void ProcessHeadingRow(CsvReader csv)
         {
-            AssignProperties(csv, Descriptor.HEADING);
+            AssignProperties(csv, AgsDescriptor.HEADING);
         }
 
         private void ProcessUnitRow(CsvReader csv)
         {
-            AssignProperties(csv, Descriptor.UNIT);
+            AssignProperties(csv, AgsDescriptor.UNIT);
         }
 
         private void ProcessTypeRow(CsvReader csv)
         {
-            AssignProperties(csv, Descriptor.TYPE);
+            AssignProperties(csv, AgsDescriptor.TYPE);
         }
 
         private void ProcessDataRow(CsvReader csv)
@@ -113,7 +120,7 @@ namespace AgsVerifierLibrary.Actions
             }
         }
 
-        private void AssignProperties(CsvReader csv, Descriptor descriptor)
+        private void AssignProperties(CsvReader csv, AgsDescriptor descriptor)
         {
             if (_currentGroup.Columns.Count < 2)
                 GenerateColumns(csv.Parser.Record.Length);
@@ -160,8 +167,8 @@ namespace AgsVerifierLibrary.Actions
             if (_parentGroupExceptions.Contains(group.Name))
                 return;
 
-            string parentGroupName = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", Descriptor.GROUP).FirstOf("DICT_PGRP")
-                ?? _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", Descriptor.GROUP).FirstOf("DICT_PGRP")
+            string parentGroupName = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", AgsDescriptor.GROUP).FirstOf("DICT_PGRP")
+                ?? _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", AgsDescriptor.GROUP).FirstOf("DICT_PGRP")
                 ?? string.Empty;
 
             if (parentGroupName is not "")
@@ -172,9 +179,9 @@ namespace AgsVerifierLibrary.Actions
         {
             foreach (var column in group.Columns)
             {
-                if (column.Heading == "Index" || column.Heading == "HEADING")
+                if (column.Heading is "Index" or "HEADING")
                     continue;
-                    
+
                 column.Status = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_HDNG", column.Heading).FirstOf("DICT_STAT")
                     ?? _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_HDNG", column.Heading).FirstOf("DICT_STAT")
                     ?? string.Empty;

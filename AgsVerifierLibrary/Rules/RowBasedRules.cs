@@ -1,4 +1,5 @@
-﻿using AgsVerifierLibrary.Extensions;
+﻿using AgsVerifierLibrary.Enums;
+using AgsVerifierLibrary.Extensions;
 using AgsVerifierLibrary.Models;
 using CsvHelper;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ namespace AgsVerifierLibrary.Rules
     {
         private static readonly Regex _regexCsvRowSplit = new(@",(?=(?:""[^""]*?(?:[^""]*)*))|,(?=[^"", ]+(?:, |$))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex _regexOnlyWhiteSpace = new(@"^\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        
+
         public static void CheckRow(CsvReader csv, List<RuleError> errors, AgsGroup group)
         {
             Rule1(csv, errors);
@@ -36,7 +37,8 @@ namespace AgsVerifierLibrary.Rules
             errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "1",
+                RuleName = "1",
+                RuleId = 100,
                 RowNumber = csv.Parser.RawRow,
                 Message = "Has Non-ASCII character(s).",
             });
@@ -54,7 +56,8 @@ namespace AgsVerifierLibrary.Rules
             errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "2a",
+                RuleName = "2a",
+                RuleId = 210,
                 RowNumber = csv.Parser.RawRow,
                 Group = group.Name,
                 Message = "Is not terminated by <CR> and <LF> characters.",
@@ -75,7 +78,8 @@ namespace AgsVerifierLibrary.Rules
             errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "2c",
+                RuleName = "2c",
+                RuleId = 230,
                 RowNumber = csv.Parser.RawRow,
                 Group = group.Name,
                 Message = "HEADER row has duplicate fields.",
@@ -103,13 +107,14 @@ namespace AgsVerifierLibrary.Rules
             errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "3",
+                RuleName = "3",
+                RuleId = 300,
                 RowNumber = csv.Parser.RawRow,
                 Group = group.Name,
                 Message = "Does not start with a valid data descriptor.",
             });
         }
-        
+
         /// <summary>
         /// Within each GROUP, the DATA items are contained in data FIELDs. Each data FIELD contains a single 
         /// data VARIABLE in each row. Each DATA row of a data file will contain one or more data FIELDs.
@@ -128,7 +133,8 @@ namespace AgsVerifierLibrary.Rules
                 errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "4a",
+                    RuleName = "4a",
+                    RuleId = 410,
                     RowNumber = csv.Parser.RawRow,
                     Group = group.Name,
                     Message = "GROUP row has more than one field.",
@@ -139,7 +145,8 @@ namespace AgsVerifierLibrary.Rules
             errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "4a",
+                RuleName = "4a",
+                RuleId = 411,
                 RowNumber = csv.Parser.RawRow,
                 Group = group.Name,
                 Message = "GROUP row is malformed.",
@@ -156,14 +163,13 @@ namespace AgsVerifierLibrary.Rules
             if (descriptors.Any(d => d.Contains(csv.GetField(0))) == false)
                 return;
 
-
-
             if (group.Columns.Select(c => c.Heading) == null)
             {
                 errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "4b",
+                    RuleName = "4b",
+                    RuleId = 420,
                     RowNumber = csv.Parser.RawRow,
                     Group = group.Name,
                     Message = "HEADING row missing.",
@@ -171,7 +177,7 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            var test = group.ReturnDescriptor(AgsEnum.Descriptor.HEADING);
+            var test = group.ReturnDescriptor(AgsDescriptor.HEADING);
             var headings = group.Columns.Select(c => c.Heading);
 
             if (headings.Count() == csv.Parser.Record.Length + 1) // +1 to account for index column
@@ -180,7 +186,8 @@ namespace AgsVerifierLibrary.Rules
             errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "4b",
+                RuleName = "4b",
+                RuleId = 421,
                 RowNumber = csv.Parser.RawRow,
                 Group = group.Name,
                 Message = "Number of fields does not match the HEADING row.",
@@ -206,7 +213,8 @@ namespace AgsVerifierLibrary.Rules
                 errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "5",
+                    RuleName = "5",
+                    RuleId = 500,
                     RowNumber = csv.Parser.RawRow,
                     Group = group.Name,
                     Message = "Contains quotes within a data field. All such quotes should be enclosed by a second quote.",
@@ -220,7 +228,8 @@ namespace AgsVerifierLibrary.Rules
                 errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "5",
+                    RuleName = "5",
+                    RuleId = 501,
                     RowNumber = csv.Parser.RawRow,
                     Group = group.Name,
                     Message = "Contains only white space characters.",
@@ -236,7 +245,8 @@ namespace AgsVerifierLibrary.Rules
             errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "5",
+                RuleName = "5",
+                RuleId = 502,
                 RowNumber = csv.Parser.RawRow,
                 Group = group.Name,
                 Message = "Contains fields that are not enclosed in double quotes.",

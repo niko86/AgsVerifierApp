@@ -1,18 +1,18 @@
-﻿using AgsVerifierLibrary.Models;
+﻿using AgsVerifierLibrary.Enums;
+using AgsVerifierLibrary.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using static AgsVerifierLibrary.Models.AgsEnum;
 
 namespace AgsVerifierLibrary.Extensions
 {
     public static class AgsColumnExtensions
     {
         private static readonly PropertyInfo[] _columnProperties = typeof(AgsColumn).GetProperties();
-        private static readonly string[] _exclusions = new string[] { string.Empty, null, "Index"};
+        private static readonly string[] _exclusions = new string[] { string.Empty, null, "Index" };
 
-        public static void SetColumnDescriptor(this AgsColumn column, Descriptor descriptor, string value)
+        public static void SetColumnDescriptor(this AgsColumn column, AgsDescriptor descriptor, string value)
         {
             _columnProperties
                 .FirstOrDefault(p => p.Name
@@ -25,7 +25,7 @@ namespace AgsVerifierLibrary.Extensions
             return column?.Data.Where(i => string.IsNullOrWhiteSpace(i) == false).Distinct();
         }
 
-        public static IEnumerable<string> ReturnDescriptor(this IEnumerable<AgsColumn> columns, Descriptor descriptor)
+        public static IEnumerable<string> ReturnDescriptor(this IEnumerable<AgsColumn> columns, AgsDescriptor descriptor)
         {
 
             PropertyInfo propertyInfo = _columnProperties

@@ -17,8 +17,8 @@ namespace AgsVerifierLibrary.Actions
 
         }
 
-		public void Run(List<AgsGroup> groups, string basePath)
-		{
+        public void Run(List<AgsGroup> groups, string basePath)
+        {
             //using ExcelPackage excelPackage = new();
             //foreach (var group in groups)
             //{
@@ -51,5 +51,5 @@ namespace AgsVerifierLibrary.Actions
             //excelPackage.SaveAs(fileInfo);
         }
 
-	}
+    }
 }

@@ -8,6 +8,9 @@ namespace AgsVerifierLibrary.Models
     {
         private readonly AgsGroup _group;
         private readonly int _rowIndex;
+
+        public AgsGroup Group => _group;
+
         internal AgsRow(AgsGroup group, int rowIndex)
         {
             _group = group;

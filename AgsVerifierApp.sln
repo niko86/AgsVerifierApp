@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31410.223
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgsVerifierConsole", "AgsVerifierConsole\AgsVerifierConsole.csproj", "{FA589D18-F3B3-4BEC-9951-12AACF773042}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AgsVerifierConsole", "AgsVerifierConsole\AgsVerifierConsole.csproj", "{FA589D18-F3B3-4BEC-9951-12AACF773042}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgsVerifierLibrary", "AgsVerifierLibrary\AgsVerifierLibrary.csproj", "{EB5851F4-22AC-49FC-A528-A4C6D367397B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AgsVerifierLibrary", "AgsVerifierLibrary\AgsVerifierLibrary.csproj", "{EB5851F4-22AC-49FC-A528-A4C6D367397B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgsVerifierWindowsGUI", "AgsVerifierWindowsGUI\AgsVerifierWindowsGUI.csproj", "{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{EB5851F4-22AC-49FC-A528-A4C6D367397B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EB5851F4-22AC-49FC-A528-A4C6D367397B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EB5851F4-22AC-49FC-A528-A4C6D367397B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

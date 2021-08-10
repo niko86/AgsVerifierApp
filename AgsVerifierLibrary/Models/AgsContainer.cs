@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -7,19 +6,14 @@ namespace AgsVerifierLibrary.Models
 {
     public class AgsContainer : IEnumerable<AgsGroup>
     {
-        public AgsContainer(string filePath)
-        {
-            FilePath = filePath;
-        }
-
-        public string FilePath { get; }
+        public string FilePath { get; set; }
 
         private List<AgsGroup> _groups = new();
 
         public List<AgsGroup> Groups
         {
-            get { return _groups; }
-            set { _groups = value; }
+            get => _groups;
+            set => _groups = value;
         }
 
         public AgsGroup this[int groupIndex]

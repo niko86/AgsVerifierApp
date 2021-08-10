@@ -1,0 +1,65 @@
+﻿<Window x:Class="AgsVerifierWindowsGUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:AgsVerifierWindowsGUI"
+        xmlns:ext="clr-namespace:AgsVerifierWindowsGUI.Extensions"
+        xmlns:enumTypes="clr-namespace:AgsVerifierLibrary.Enums;assembly=AgsVerifierLibrary"
+        mc:Ignorable="d" Title="AGS File Validator" 
+        Height="470" Width="800" MinHeight="470" MinWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <GroupBox Grid.Row="0" Header="AGS File Selection" Margin="10 5" Padding="5">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBox Grid.Column="0" VerticalAlignment="Center" Padding="5" Margin="5" IsReadOnly="True"
+                     Text="{Binding InputFilePath}" />
+                <Button Grid.Column="1" Margin="5" Padding="10 5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        MinWidth="90" Command="{Binding OpenFileDialogCommand}" Content="Select File" />
+            </Grid>
+        </GroupBox>
+        <GroupBox Grid.Row="1" Header="Validation" Margin="10 5" Padding="5">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="auto"/>
+                    <ColumnDefinition Width="auto"/>
+                    <ColumnDefinition Width="auto"/>
+                </Grid.ColumnDefinitions>
+
+                <ComboBox Grid.Row="0" Grid.Column="0" Margin="5" VerticalContentAlignment="Center" x:Name="agsVersion"
+                          ItemsSource="{Binding Source={ext:EnumBindingSource {x:Type enumTypes:AgsVersion}}}" 
+                          SelectedItem="{Binding SelectedAgsVersion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                <Button Grid.Row="0" Grid.Column="1" Margin="5" Padding="10 5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        MinWidth="90" Command="{Binding ValidateAgsCommand}" Content="Validate File" />
+
+                <Button Grid.Row="0" Grid.Column="2" Margin="5" Padding="10 5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        MinWidth="90" Command="{Binding ExportValidationReportCommand}" Content="Export Report" />
+
+                <Button Grid.Row="0" Grid.Column="3" Margin="5" Padding="10 5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        MinWidth="90" Command="{Binding ExportAgsToExcelCommand}" Content="Export xlsx" />
+
+                <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" Margin="5" Padding="10 5" IsReadOnly="True"
+                         Height="250" VerticalScrollBarVisibility="Visible" TextWrapping="Wrap"
+                         Text="{Binding Path=ErrorText}" />
+
+            </Grid>
+        </GroupBox>
+    </Grid>
+</Window>

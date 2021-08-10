@@ -1,28 +1,25 @@
-﻿using AgsVerifierLibrary.Models;
+﻿using AgsVerifierLibrary.Enums;
+using AgsVerifierLibrary.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using static AgsVerifierLibrary.Models.AgsEnum;
 
 namespace AgsVerifierLibrary.Extensions
 {
     public static class AgsRowExtensions
     {
-        private static readonly FieldInfo _groupField = typeof(AgsRow).GetField("_group", BindingFlags.NonPublic | BindingFlags.Instance);
-
         public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, string filter)
         {
             return rows?.Where(d => d.Contains(key, filter));
         }
 
-        public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, Descriptor descriptor)
+        public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, AgsDescriptor descriptor)
         {
             return rows
                 .Where(d => (string)d[key] == descriptor.Name());
         }
 
-        public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, Status status)
+        public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, AgsStatus status)
         {
             return rows
                 .Where(d => (string)d[key] == status.Name());
@@ -48,16 +45,13 @@ namespace AgsVerifierLibrary.Extensions
             return row[key].ToString().Contains(filter, StringComparison.InvariantCultureIgnoreCase);
         }
 
-        public static string ToStringByStatus(this AgsRow row, Status status)
+        public static string ToStringByStatus(this AgsRow row, AgsStatus status)
         {
-            // Using reflection to keep logic out of Row model
-            AgsGroup group = (AgsGroup)_groupField.GetValue(row);
-
-            if (status is Status.KEY)
+            if (status is AgsStatus.KEY)
             {
-                return string.Join('|', group.GetColumnsOfStatus(status).Select(c => row[c.Heading]));
+                return string.Join('|', row.Group.GetColumnsOfStatus(status).Select(c => row[c.Heading]));
             }
-            else if (status is Status.REQUIRED)
+            else if (status is AgsStatus.REQUIRED)
             {
                 List<string> temp = new();
 
@@ -66,7 +60,7 @@ namespace AgsVerifierLibrary.Extensions
                     if (i == 0) // Skips index column, inelegant hack
                         continue;
 
-                    if (group[i].Status == Status.REQUIRED.Name() && string.IsNullOrWhiteSpace(row[i].ToString()))
+                    if (row.Group[i].Status == AgsStatus.REQUIRED.Name() && string.IsNullOrWhiteSpace(row[i].ToString()))
                     {
                         temp.Add("???");
                         continue;

@@ -1,4 +1,4 @@
-﻿using AgsVerifierLibrary.Actions;
+﻿using AgsVerifierLibrary.Enums;
 using AgsVerifierLibrary.Extensions;
 using AgsVerifierLibrary.Models;
 using System;
@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using static AgsVerifierLibrary.Models.AgsEnum;
 
 namespace AgsVerifierLibrary.Rules
 {
@@ -24,21 +23,21 @@ namespace AgsVerifierLibrary.Rules
             _ags = ags;
             _stdDictionary = stdDictionary;
             _errors = errors;
+            CheckGroups();
         }
 
-        public void CheckGroups()
+        private void CheckGroups()
         {
             Rule11(); // Covered by other rules
             Rule12(); // Covered by other rules
 
             Rule11a(); // TRAN group
             Rule11b(); // TRAN group
-
             Rule13(); // PROJ group
             Rule14(); // TRAN group
             Rule15(); // UNIT group
             Rule16(); // ABBR group
-            Rule16a(); // ABBR+TRAN group
+            //Rule16a(); // ABBR+TRAN group - Called by Rule 16
             Rule17(); // TYPE group
             Rule18(); // DICT group
             Rule20(); // FILE group
@@ -52,7 +51,6 @@ namespace AgsVerifierLibrary.Rules
                 Rule10a(group);
                 Rule10b(group);
                 Rule10c(group);
-
                 Rule11c(group);
                 Rule18a(group);
                 Rule19(group);
@@ -73,7 +71,8 @@ namespace AgsVerifierLibrary.Rules
             _errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "2",
+                RuleName = "2",
+                RuleId = 200,
                 Group = group.Name,
                 Message = $"No DATA rows in the {group.Name} table.",
             });
@@ -89,12 +88,13 @@ namespace AgsVerifierLibrary.Rules
 
             foreach (var descriptor in descriptors)
             {
-                if (group.GetGroupDescriptorRowNumber((Descriptor)Enum.Parse(typeof(Descriptor), descriptor)) == 0)
+                if (group.GetGroupDescriptorRowNumber((AgsDescriptor)Enum.Parse(typeof(AgsDescriptor), descriptor)) == 0)
                 {
                     _errors.Add(new RuleError()
                     {
                         Status = "Fail",
-                        RuleId = "2b",
+                        RuleName = "2b",
+                        RuleId = 220,
                         Group = group.Name,
                         RowNumber = group.GroupRow,
                         Message = $"{descriptor} row missing from the {group.Name} group.",
@@ -112,7 +112,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "2b",
+                    RuleName = "2b",
+                    RuleId = 221,
                     Group = group.Name,
                     RowNumber = group.UnitRow,
                     Message = $"UNIT row is misplaced. It should be immediately below the HEADING row.",
@@ -124,7 +125,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "2b",
+                    RuleName = "2b",
+                    RuleId = 222,
                     Group = group.Name,
                     RowNumber = group.TypeRow,
                     Message = $"TYPE row is misplaced. It should be immediately below the UNIT row.",
@@ -138,7 +140,7 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule7(AgsGroup group)
         {
-            var dictHeadings = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", Descriptor.HEADING).AllOf("DICT_HDNG");
+            var dictHeadings = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_TYPE", AgsDescriptor.HEADING).AllOf("DICT_HDNG");
             var groupHeadings = group.Columns.Select(c => c.Heading);
 
             var intersectDictWithFile = dictHeadings.Intersect(groupHeadings).ToArray();
@@ -155,10 +157,11 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "7",
+                    RuleName = "7",
+                    RuleId = 700,
                     Group = group.Name,
                     RowNumber = group.HeadingRow,
-                    Message = $"Headings not in order starting from {intersectFileWithDict[i]}. Expected order: ...{string.Join('|', intersectDictWithFile[i..])}",
+                    Message = $"Standard dictionary defined headings not in order starting from {intersectFileWithDict[i]}. Expected order: ...{string.Join('|', intersectDictWithFile[i..])}",
                 });
                 return;
             }
@@ -174,15 +177,16 @@ namespace AgsVerifierLibrary.Rules
             var stdDictTableFilteredByGroup = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name);
             var fileDictTableFilteredByGroup = _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name);
 
-            var stdDictTableName = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.GROUP);
-            var fileDictTableName = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.GROUP);
+            var stdDictTableName = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", AgsDescriptor.GROUP);
+            var fileDictTableName = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", AgsDescriptor.GROUP);
 
             if (stdDictTableName.Any() == false && fileDictTableName.Any() == false)
             {
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "9",
+                    RuleName = "9",
+                    RuleId = 900,
                     Group = group.Name,
                     RowNumber = group.HeadingRow,
                     Message = $"GROUP name not defined within either the AGS FORMAT DATA DICTIONARY or DICT table.",
@@ -190,12 +194,12 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            var stdDictTableHeadings = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).AllOf("DICT_HDNG");
-            var fileDictTableHeadings = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", Descriptor.HEADING).AllOf("DICT_HDNG");
+            var stdDictTableHeadings = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", AgsDescriptor.HEADING).AllOf("DICT_HDNG");
+            var fileDictTableHeadings = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", AgsDescriptor.HEADING).AllOf("DICT_HDNG");
 
             var combinedDictTableHeadings = stdDictTableHeadings.Concat(fileDictTableHeadings).Distinct();
 
-            var groupHeadings = group.ReturnDescriptor(Descriptor.HEADING);
+            var groupHeadings = group.ReturnDescriptor(AgsDescriptor.HEADING);
 
             foreach (var groupHeading in groupHeadings)
             {
@@ -204,7 +208,8 @@ namespace AgsVerifierLibrary.Rules
                     _errors.Add(new RuleError()
                     {
                         Status = "Fail",
-                        RuleId = "9",
+                        RuleName = "9",
+                        RuleId = 901,
                         Group = group.Name,
                         RowNumber = group.HeadingRow,
                         Message = $"Duplicate GROUP HEADING found in field  {groupHeading} found.",
@@ -217,7 +222,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "9",
+                    RuleName = "9",
+                    RuleId = 902,
                     Group = group.Name,
                     RowNumber = group.HeadingRow,
                     Message = $"{groupHeading} not found in DICT table or the standard AGS4 dictionary.",
@@ -231,11 +237,11 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule10a(AgsGroup group)
         {
-            var keyColumns = group.ColumnsByStatus(Status.KEY);
+            var keyColumns = group.ColumnsByStatus(AgsStatus.KEY);
 
-            var keyHeadings = keyColumns.ReturnDescriptor(Descriptor.HEADING);
+            var keyHeadings = keyColumns.ReturnDescriptor(AgsDescriptor.HEADING);
 
-            var dictKeyHeadings = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_STAT", Status.KEY).AllOf("DICT_HDNG");
+            var dictKeyHeadings = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AndBy("DICT_STAT", AgsStatus.KEY).AllOf("DICT_HDNG");
 
             var differences = dictKeyHeadings.Except(keyHeadings);
 
@@ -244,7 +250,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "10a",
+                    RuleName = "10a",
+                    RuleId = 1010,
                     Group = group.Name,
                     RowNumber = group.HeadingRow,
                     Message = $"KEY field {diff} not found.",
@@ -253,16 +260,17 @@ namespace AgsVerifierLibrary.Rules
 
             foreach (var row in group.Rows)
             {
-                string str = row.ToStringByStatus(Status.KEY);
+                string str = row.ToStringByStatus(AgsStatus.KEY);
 
-                if (group.Rows.Count(r => r.ToStringByStatus(Status.KEY) == str) > 1)
+                if (group.Rows.Count(r => r.ToStringByStatus(AgsStatus.KEY) == str) > 1)
                 {
                     _errors.Add(new RuleError()
                     {
                         Status = "Fail",
-                        RuleId = "10a",
+                        RuleName = "10a",
+                        RuleId = 1011,
                         Group = group.Name,
-                        RowNumber = (int) row["Index"],
+                        RowNumber = (int)row["Index"],
                         Message = $"Duplicate key field combination: {str}",
                     });
                 }
@@ -275,9 +283,9 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule10b(AgsGroup group)
         {
-            var requiredColumns = group.ColumnsByStatus(Status.REQUIRED);
-            var requiredHeadings = requiredColumns.ReturnDescriptor(Descriptor.HEADING);
-            var groupHeadings = group.ReturnDescriptor(Descriptor.HEADING);
+            var requiredColumns = group.ColumnsByStatus(AgsStatus.REQUIRED);
+            var requiredHeadings = requiredColumns.ReturnDescriptor(AgsDescriptor.HEADING);
+            var groupHeadings = group.ReturnDescriptor(AgsDescriptor.HEADING);
 
             foreach (var requiredHeading in requiredHeadings)
             {
@@ -286,7 +294,8 @@ namespace AgsVerifierLibrary.Rules
                     _errors.Add(new RuleError()
                     {
                         Status = "Fail",
-                        RuleId = "10b",
+                        RuleName = "10b",
+                        RuleId = 1020,
                         Group = group.Name,
                         RowNumber = group.HeadingRow,
                         Message = $"REQUIRED field {requiredHeading} not found.",
@@ -296,14 +305,15 @@ namespace AgsVerifierLibrary.Rules
 
             foreach (var row in group.Rows)
             {
-                string str = row.ToStringByStatus(Status.REQUIRED);
+                string str = row.ToStringByStatus(AgsStatus.REQUIRED);
 
                 if (str.Contains("???"))
                 {
                     _errors.Add(new RuleError()
                     {
                         Status = "Fail",
-                        RuleId = "10b",
+                        RuleName = "10b",
+                        RuleId = 1021,
                         Group = group.Name,
                         RowNumber = (int)row["Index"],
                         Message = $"REQUIRED field(s) containing empty values: ...{str}",
@@ -320,14 +330,15 @@ namespace AgsVerifierLibrary.Rules
         private void Rule10c(AgsGroup group)
         {
             if (_parentGroupExceptions.Contains(group.Name)) // TODO work out how to indicate exceptions within parent group model ref??
-                return; 
+                return;
 
             if (group.ParentGroup is null)
             {
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "10c",
+                    RuleName = "10c",
+                    RuleId = 1030,
                     Group = group.Name,
                     RowNumber = group.GroupRow,
                     Message = $"Parent group left blank in dictionary.",
@@ -340,7 +351,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "10c",
+                    RuleName = "10c",
+                    RuleId = 1031,
                     Group = group.Name,
                     RowNumber = group.GroupRow,
                     Message = $"Could not find parent group {group.ParentGroup.Name}.",
@@ -348,14 +360,15 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            var parentKeyColumns = group.ParentGroup.GetColumnsOfStatus(Status.KEY);
+            var parentKeyColumns = group.ParentGroup.GetColumnsOfStatus(AgsStatus.KEY);
 
             if (parentKeyColumns.Any() == false)
             {
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "10c",
+                    RuleName = "10c",
+                    RuleId = 1032,
                     Group = group.Name,
                     RowNumber = group.GroupRow,
                     Message = $"Could not check parent entries since group definitions not found in standard dictionary or DICT table.",
@@ -372,10 +385,11 @@ namespace AgsVerifierLibrary.Rules
                         _errors.Add(new RuleError()
                         {
                             Status = "Fail",
-                            RuleId = "10c",
+                            RuleName = "10c",
+                            RuleId = 1033,
                             Group = group.Name,
                             RowNumber = row.Index,
-                            Message = $"Parent key entry for line not found in {group.ParentGroup.Name}: {row.ToStringByMask(parentKeyColumns.ReturnDescriptor(Descriptor.HEADING))}",
+                            Message = $"Parent key entry for line not found in {group.ParentGroup.Name}: {row.ToStringByMask(parentKeyColumns.ReturnDescriptor(AgsDescriptor.HEADING))}",
                         });
                     }
                 }
@@ -406,7 +420,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "11a",
+                    RuleName = "11a",
+                    RuleId = 1110,
                     Group = group.Name,
                     RowNumber = group.Rows[0].Index,
                     Message = $"TRAN_DLIM missing.",
@@ -418,7 +433,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "11a",
+                    RuleName = "11a",
+                    RuleId = 1111,
                     Group = group.Name,
                     RowNumber = group.Rows[0].Index,
                     Message = $"TRAN_DLIM is a null value.",
@@ -441,7 +457,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "11b",
+                    RuleName = "11b",
+                    RuleId = 1120,
                     Group = group.Name,
                     RowNumber = group.Rows[0].Index,
                     Message = $"TRAN_RCON missing.",
@@ -453,7 +470,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "11b",
+                    RuleName = "11b",
+                    RuleId = 1121,
                     Group = group.Name,
                     RowNumber = group.Rows[0].Index,
                     Message = $"TRAN_RCON is a null value.",
@@ -467,12 +485,10 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule11c(AgsGroup group)
         {
-            var errorIds = _errors.Select(e => e.RuleId);
-
-            if (errorIds.Contains("11a") == false || errorIds.Contains("11b") == false)
+            if (_errors.Contains("11a") == false || _errors.Contains("11b") == false)
                 return;
 
-            var rlColumns = group.ColumnsByType(DataType.RL);
+            var rlColumns = group.ColumnsByType(AgsDataType.RL);
 
             if (rlColumns is null)
                 return;
@@ -499,14 +515,15 @@ namespace AgsVerifierLibrary.Rules
                     {
                         string linkedGroupName = recordLinks[j].Split(delimiter).First();
 
-                        var linkedGroupRecords = _ags[linkedGroupName].ColumnsByStatus(Status.KEY).DelimitedKeyRows(delimiter);
+                        var linkedGroupRecords = _ags[linkedGroupName].ColumnsByStatus(AgsStatus.KEY).DelimitedKeyRows(delimiter);
 
                         if (row.Contains(colRef, delimiter) == false)
                         {
                             _errors.Add(new RuleError()
                             {
                                 Status = "Fail",
-                                RuleId = "11c",
+                                RuleName = "11c",
+                                RuleId = 1130,
                                 Group = group.Name,
                                 RowNumber = row.Index,
                                 Message = $"Invalid record link: \"{row[colRef]}\", \"{delimiter}\" should be used as delimiter.",
@@ -521,7 +538,8 @@ namespace AgsVerifierLibrary.Rules
                             _errors.Add(new RuleError()
                             {
                                 Status = "Fail",
-                                RuleId = "11c",
+                                RuleName = "11c",
+                                RuleId = 1131,
                                 Group = group.Name,
                                 RowNumber = row.Index,
                                 Message = $"Invalid record link: \"{row[colRef]}\". No such record found.",
@@ -534,7 +552,8 @@ namespace AgsVerifierLibrary.Rules
                             _errors.Add(new RuleError()
                             {
                                 Status = "Fail",
-                                RuleId = "11c",
+                                RuleName = "11c",
+                                RuleId = 1132,
                                 Group = group.Name,
                                 RowNumber = row.Index,
                                 Message = $"Invalid record link: \"{row[colRef]}\". Link refers to more than one record.",
@@ -550,7 +569,8 @@ namespace AgsVerifierLibrary.Rules
                             _errors.Add(new RuleError()
                             {
                                 Status = "Fail",
-                                RuleId = "11",
+                                RuleName = "11",
+                                RuleId = 1133,
                                 Group = group.Name,
                                 RowNumber = row.Index,
                                 Message = $"Invalid record link: \"{row[colRef]}\". Link refers to group \"{splitRecordLink[0]}\" which was not found.",
@@ -558,14 +578,15 @@ namespace AgsVerifierLibrary.Rules
                             continue;
                         }
 
-                        var linkedGroupKeyColumns = linkedGroup.GetColumnsOfStatus(Status.KEY);
+                        var linkedGroupKeyColumns = linkedGroup.GetColumnsOfStatus(AgsStatus.KEY);
 
                         if (linkedGroupKeyColumns.Count() < splitRecordLink[1..].Length)
                         {
                             _errors.Add(new RuleError()
                             {
                                 Status = "Fail",
-                                RuleId = "11",
+                                RuleName = "11",
+                                RuleId = 1134,
                                 Group = group.Name,
                                 RowNumber = row.Index,
                                 Message = $"Invalid record link: \"{row[colRef]}\". Link reference has too many delimited values compared to the number of cross-reference group KEY fields.",
@@ -577,7 +598,8 @@ namespace AgsVerifierLibrary.Rules
                             _errors.Add(new RuleError()
                             {
                                 Status = "Fail",
-                                RuleId = "11",
+                                RuleName = "11",
+                                RuleId = 1135,
                                 Group = group.Name,
                                 RowNumber = row.Index,
                                 Message = $"Invalid record link: \"{row[colRef]}\". Link reference has too few delimited values compared to the number of cross-reference group KEY fields.",
@@ -613,7 +635,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "13",
+                    RuleName = "13",
+                    RuleId = 1300,
                     Group = projGroup.Name,
                     RowNumber = projGroup.GroupRow,
                     Message = "There should be at least one DATA row in the PROJ table.",
@@ -625,7 +648,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "13",
+                    RuleName = "13",
+                    RuleId = 1301,
                     Group = projGroup.Name,
                     RowNumber = projGroup.GroupRow,
                     Message = "There should not be more than one DATA row in the PROJ table.",
@@ -635,7 +659,8 @@ namespace AgsVerifierLibrary.Rules
             _errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "13",
+                RuleName = "13",
+                RuleId = 1302,
                 Group = projGroup.Name,
                 RowNumber = projGroup.Rows[0].Index,
                 Message = "Each AGS data file shall contain the PROJ GROUP.",
@@ -655,7 +680,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "14",
+                    RuleName = "14",
+                    RuleId = 1400,
                     Group = tranGroup.Name,
                     Message = "Each AGS data file shall contain the TRAN GROUP.",
                 });
@@ -669,7 +695,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "14",
+                    RuleName = "14",
+                    RuleId = 1401,
                     RowNumber = tranGroup.GroupRow,
                     Group = tranGroup.Name,
                     Message = "There should be at least one DATA row in the TRAN table.",
@@ -681,7 +708,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "14",
+                    RuleName = "14",
+                    RuleId = 1402,
                     RowNumber = tranGroup.Rows[0].Index,
                     Group = tranGroup.Name,
                     Message = "There should not be more than one DATA row in the TRAN table.",
@@ -703,14 +731,15 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "15",
+                    RuleName = "15",
+                    RuleId = 1500,
                     Group = unitGroup.Name,
                     Message = "UNIT table not found.",
                 });
             }
 
             var allGroupUnits = _ags.ReturnAllUnits().Distinct();
-            var allPuTypeColumnData = _ags.GetAllColumnsOfType(DataType.PU).MergeData().Distinct();
+            var allPuTypeColumnData = _ags.GetAllColumnsOfType(AgsDataType.PU).MergeData().Distinct();
             var mergedUnits = allGroupUnits.Concat(allPuTypeColumnData);
 
             var unitUnits = unitGroup["UNIT_UNIT"].Data;
@@ -723,13 +752,14 @@ namespace AgsVerifierLibrary.Rules
             _errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "15",
+                RuleName = "15",
+                RuleId = 1501,
                 RowNumber = unitGroup.GroupRow,
                 Group = unitGroup.Name,
                 Message = $"Unit(s) \"{string.Join('|', missingUnits)}\" not found in UNIT table.",
             });
         }
-
+        // TODO should i check if ABBR RCON holding the value of the heading matches or else return an error???
         /// <summary>
         ///  Each data file shall contain the ABBR GROUP when abbreviations have been included in the data file.
         ///  The abbreviations listed in the ABBR GROUP shall include definitions for all abbreviations entered
@@ -738,7 +768,7 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule16()
         {
-            var allPaTypeColumns = _ags.GetAllColumnsOfType(DataType.PA);
+            var allPaTypeColumns = _ags.GetAllColumnsOfType(AgsDataType.PA);
 
             if (allPaTypeColumns is null)
                 return;
@@ -750,50 +780,70 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "16",
+                    RuleName = "16",
+                    RuleId = 1600,
                     Group = "ABBR",
                     Message = $"PA field abbreviations identified, however ABBR table not found.",
                 });
             }
 
-            var abbrCodes = abbrGroup["ABBR_CODE"].Data.Distinct().ToList();
+            if (_errors.Contains(1120) || _errors.Contains(1121))
+                return; 
+
+            string concatenator = _ags["TRAN"]["TRAN_RCON"].Data[0];
+
+            var abbrCodes = abbrGroup["ABBR_CODE"].Data.Distinct();
 
             foreach (var paTypeColumn in allPaTypeColumns)
             {
-                var missingAbbrCodes = paTypeColumn.ReturnDataDistinctNonBlank().Except(abbrCodes);
-
-                foreach (var missingAbbrCode in missingAbbrCodes)
+                foreach (var row in paTypeColumn.Group.Rows)
                 {
+                    if (row[paTypeColumn.Heading].ToString().Contains(concatenator))
+                        Rule16a(paTypeColumn, row, concatenator, abbrCodes);
+
+                    if (abbrCodes.Contains(row[paTypeColumn.Heading]))
+                        continue;
+
                     _errors.Add(new RuleError()
                     {
                         Status = "Fail",
-                        RuleId = "16",
+                        RuleName = "16",
+                        RuleId = 1601,
                         Group = "ABBR",
                         Field = paTypeColumn.Heading,
                         RowNumber = abbrGroup.GroupRow,
-                        Message = $"\"{missingAbbrCode}\" under {paTypeColumn.Heading} in {paTypeColumn.MemberOf} not found in ABBR table",
+                        Message = $"\"{row[paTypeColumn.Heading]}\" under {paTypeColumn.Heading} in {paTypeColumn.Group.Name} not found in ABBR table.",
                     });
                 }
             }
         }
 
-        // TO FINISH
         /// <summary>
         ///  Where multiple abbreviations are required to fully codify a FIELD, the abbreviations shall be separated by a defined
         ///  concatenation character. This single concatenation character shall be defined in TRAN_RCON. The default being "+"
         ///  (ASCII character 43). Each abbreviation used in such combinations shall be listed separately in the ABBR GROUP.
         ///  e.g. "CP+RC" must have entries for both "CP" and "RC" in ABBR GROUP, together with their full definition.
         /// </summary>
-        private void Rule16a()
+        private void Rule16a(AgsColumn column, AgsRow row, string concatenator, IEnumerable<dynamic> abbrCodes)
         {
-            var raisedErrorIds = _errors.Select(e => e.RuleId);
+            var splitValues = row[column.Heading].ToString().Split(concatenator);
 
-            if (raisedErrorIds.Contains("14"))
-                return; // No TRAN table no way to concatenator. Or would
-
-            AgsGroup tranGroup = _ags["TRAN"];
-
-            AgsColumn tranRconColumn = tranGroup["TRAN_RCON"];
+            foreach (var splitValue in splitValues)
+            {
+                if (abbrCodes.Contains(splitValue) == false)
+                {
+                    _errors.Add(new RuleError()
+                    {
+                        Status = "Fail",
+                        RuleName = "16a",
+                        RuleId = 1610,
+                        Group = "ABBR",
+                        Field = column.Heading,
+                        RowNumber = row.Index,
+                        Message = $"Concatenated field \"{row[column.Heading]}\" contains \"{splitValue}\" under {column.Heading} in {column.Group.Name} not found in ABBR table.",
+                    });
+                }
+            }
         }
 
         /// <summary>
@@ -809,7 +859,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "17",
+                    RuleName = "17",
+                    RuleId = 1700,
                     Group = "TYPE",
                     Message = "TYPE table not found.",
                 });
@@ -826,7 +877,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "17",
+                    RuleName = "17",
+                    RuleId = 1701,
                     Group = "TYPE",
                     RowNumber = typeGroup.GroupRow,
                     Message = $"Data type {typeColumn} not found in TYPE table.",
@@ -845,7 +897,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "18",
+                    RuleName = "18",
+                    RuleId = 1800,
                     Group = "DICT",
                     Message = "DICT table not found. See error log under Rule 9 for a list of non-standard headings that need to be defined in a DICT table.",
                 });
@@ -876,10 +929,11 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "18a",
+                    RuleName = "18a",
+                    RuleId = 1810,
                     Group = group.Name,
                     RowNumber = group.HeadingRow,
-                    Message = $"Headings not in order starting from {intersectFileWithDict[i]}. Expected order: ...{string.Join('|', intersectDictWithFile[i..])}",
+                    Message = $"User defined headings not in order starting from {intersectFileWithDict[i]}. Expected order: ...{string.Join('|', intersectDictWithFile[i..])}",
                 });
                 return;
             }
@@ -896,7 +950,8 @@ namespace AgsVerifierLibrary.Rules
             _errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "19",
+                RuleName = "19",
+                RuleId = 1900,
                 RowNumber = group.GroupRow,
                 Group = group.Name,
                 Message = "GROUP name should consist of four uppercase letters.",
@@ -921,13 +976,13 @@ namespace AgsVerifierLibrary.Rules
                         new RuleError()
                         {
                             Status = "Fail",
-                            RuleId = "19a",
+                            RuleName = "19a",
+                            RuleId = 1910,
                             RowNumber = group.HeadingRow,
                             Group = group.Name,
                             Field = heading,
                             Message = $"HEADING {heading} should consist of only uppercase letters, numbers, and an underscore character.",
-                        })
-                        );
+                        }));
 
                 headings
                     .Where(r => r.Length > 9)
@@ -936,13 +991,13 @@ namespace AgsVerifierLibrary.Rules
                         new RuleError()
                         {
                             Status = "Fail",
-                            RuleId = "19a",
+                            RuleName = "19a",
+                            RuleId = 1911,
                             RowNumber = group.HeadingRow,
                             Group = group.Name,
                             Field = heading,
                             Message = $"HEADING {heading} is more than 9 characters in length.",
-                        })
-                        );
+                        }));
 
                 return;
             }
@@ -950,7 +1005,8 @@ namespace AgsVerifierLibrary.Rules
             _errors.Add(new RuleError()
             {
                 Status = "Fail",
-                RuleId = "19a",
+                RuleName = "19a",
+                RuleId = 1912,
                 RowNumber = group.HeadingRow,
                 Group = group.Name,
                 Message = "HEADING row does not have any fields.",
@@ -965,7 +1021,7 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule19b(AgsGroup group)
         {
-            var headings = group.ReturnDescriptor(Descriptor.HEADING);
+            var headings = group.ReturnDescriptor(AgsDescriptor.HEADING);
 
             foreach (var heading in headings)
             {
@@ -975,7 +1031,8 @@ namespace AgsVerifierLibrary.Rules
                         new RuleError()
                         {
                             Status = "Fail",
-                            RuleId = "19b",
+                            RuleName = "19b",
+                            RuleId = 1920,
                             RowNumber = group.HeadingRow,
                             Group = group.Name,
                             Field = heading,
@@ -992,13 +1049,13 @@ namespace AgsVerifierLibrary.Rules
                         new RuleError()
                         {
                             Status = "Fail",
-                            RuleId = "19b",
+                            RuleName = "19b",
+                            RuleId = 1921,
                             RowNumber = group.HeadingRow,
                             Group = group.Name,
                             Field = heading,
                             Message = $"Heading {heading} should consist of a 4 character group name and a field name of up to 4 characters.",
                         });
-                    //continue;
                 }
 
                 string[] exclusions = new string[] { "SPEC", "TEST" };
@@ -1006,7 +1063,7 @@ namespace AgsVerifierLibrary.Rules
                 if (exclusions.Contains(splitHeading[0]))
                     continue;
 
-                var stdGroupDictRows = _stdDictionary["DICT"]["DICT_TYPE"].FilterRowsBy(Descriptor.GROUP).AllOf("DICT_GRP");
+                var stdGroupDictRows = _stdDictionary["DICT"]["DICT_TYPE"].FilterRowsBy(AgsDescriptor.GROUP).AllOf("DICT_GRP");
                 var rootGroup = _ags[splitHeading[0]];
 
                 if (stdGroupDictRows.Contains(splitHeading[0]) == false && rootGroup is null)
@@ -1015,13 +1072,13 @@ namespace AgsVerifierLibrary.Rules
                         new RuleError()
                         {
                             Status = "Fail",
-                            RuleId = "19b",
+                            RuleName = "19b",
+                            RuleId = 1922,
                             RowNumber = group.HeadingRow,
                             Group = group.Name,
                             Field = heading,
                             Message = $"Group {splitHeading[0]} referred to in {heading} could not be found in either the standard dictionary or the DICT table.",
                         });
-                    //continue;
                 }
 
                 var stdDictHeadings = _stdDictionary["DICT"]?["DICT_HDNG"].Data;
@@ -1034,7 +1091,8 @@ namespace AgsVerifierLibrary.Rules
                     _errors.Add(new RuleError()
                     {
                         Status = "Fail",
-                        RuleId = "19b",
+                        RuleName = "19b",
+                        RuleId = 1923,
                         RowNumber = group.HeadingRow,
                         Group = group.Name,
                         Field = heading,
@@ -1063,7 +1121,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "20",
+                    RuleName = "20",
+                    RuleId = 2000,
                     Group = "FILE",
                     Message = $"FILE table not found even though there are FILE_FSET entries in other tables.",
                 });
@@ -1087,9 +1146,10 @@ namespace AgsVerifierLibrary.Rules
                     _errors.Add(new RuleError()
                     {
                         Status = "Fail",
-                        RuleId = "20",
-                        Group = fSetColumn.MemberOf,
-                        RowNumber = _ags[fSetColumn.MemberOf].Rows[i].Index,
+                        RuleName = "20",
+                        RuleId = 2001,
+                        Group = fSetColumn.Group.Name,
+                        RowNumber = _ags[fSetColumn.Group.Name].Rows[i].Index,
                         Message = $"FILE_FSET entry \"{fSetColumn.Data[i]}\" not found in FILE table.",
                     });
                 }
@@ -1103,7 +1163,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "20",
+                    RuleName = "20",
+                    RuleId = 2002,
                     Group = "FILE",
                     Message = $"Folder named \"FILE\" not found. Files defined in the FILE table should be saved in this folder.",
                 });
@@ -1118,7 +1179,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "20",
+                    RuleName = "20",
+                    RuleId = 2003,
                     Group = "FILE",
                     Message = $"Sub-folder named \"{Path.Combine("FILE", missingSubFolder)}\" not found even though it is defined in the FILE table.",
                 });
@@ -1138,7 +1200,8 @@ namespace AgsVerifierLibrary.Rules
                 _errors.Add(new RuleError()
                 {
                     Status = "Fail",
-                    RuleId = "20",
+                    RuleName = "20",
+                    RuleId = 2004,
                     Group = "FILE",
                     Message = $"File named \"{Path.Combine("FILE", missingSubFile["FILE_FSET"].ToString(), missingSubFile["FILE_NAME"].ToString())}\" not found even though it is defined in the FILE table.",
                 });

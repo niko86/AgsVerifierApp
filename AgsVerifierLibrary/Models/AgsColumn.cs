@@ -1,13 +1,15 @@
-﻿using AgsVerifierLibrary.Extensions;
+﻿using AgsVerifierLibrary.Enums;
+using AgsVerifierLibrary.Extensions;
 using System.Collections.Generic;
 using System.Linq;
-using static AgsVerifierLibrary.Models.AgsEnum;
 
 namespace AgsVerifierLibrary.Models
 {
     public class AgsColumn
     {
         private readonly AgsGroup _group;
+
+        public AgsGroup Group => _group;
 
         public AgsColumn(AgsGroup group)
         {
@@ -18,7 +20,6 @@ namespace AgsVerifierLibrary.Models
         public string Type { get; set; }
         public string Unit { get; set; }
         public string Status { get; set; }
-        public string MemberOf { get => _group.Name; }
         public List<dynamic> Data { get; } = new();
 
         public IEnumerable<AgsRow> FilterRowsBy(string filter)
@@ -28,10 +29,10 @@ namespace AgsVerifierLibrary.Models
 
         public IEnumerable<AgsRow> FilterRowsBy(int filter)
         {
-            return _group.Rows.Where(r => (int) r[Heading] == filter);
+            return _group.Rows.Where(r => (int)r[Heading] == filter);
         }
 
-        public IEnumerable<AgsRow> FilterRowsBy(Descriptor descriptor)
+        public IEnumerable<AgsRow> FilterRowsBy(AgsDescriptor descriptor)
         {
             return _group.Rows.Where(r => r[Heading].ToString() == descriptor.Name());
         }
