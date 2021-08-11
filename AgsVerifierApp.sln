@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AgsVerifierConsole", "AgsVe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AgsVerifierLibrary", "AgsVerifierLibrary\AgsVerifierLibrary.csproj", "{EB5851F4-22AC-49FC-A528-A4C6D367397B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgsVerifierWindowsGUI", "AgsVerifierWindowsGUI\AgsVerifierWindowsGUI.csproj", "{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AgsVerifierWindowsGUI", "AgsVerifierWindowsGUI\AgsVerifierWindowsGUI.csproj", "{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

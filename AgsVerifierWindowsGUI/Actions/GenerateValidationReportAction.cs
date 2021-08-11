@@ -8,7 +8,7 @@ namespace AgsVerifierWindowsGUI.Actions
 {
     public static class GenerateValidationReportAction
     {
-        public static string Run(List<RuleError> errors, string inputFilePath, string selectedAgsVersion)
+        public static string Run(List<RuleError> errors, DateTime started, string inputFilePath, string selectedAgsVersion)
         {
             StringBuilder sb = new();
 
@@ -17,7 +17,7 @@ namespace AgsVerifierWindowsGUI.Actions
             sb.AppendLine($"AGS validation report ");
             sb.AppendLine($"File to be validated: {inputFilePath}");
             sb.AppendLine($"Validation carried out using AGS Standard Dictionary {selectedAgsVersion}");
-            sb.AppendLine($"Started: {DateTime.Now:G}");
+            sb.AppendLine($"Started: {started:G}");
             sb.AppendLine(new string('-', 140));
             sb.AppendLine($"{errors.Count} errors identified:");
             sb.AppendLine();

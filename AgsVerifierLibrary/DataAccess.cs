@@ -4,6 +4,7 @@ using AgsVerifierLibrary.Enums;
 using AgsVerifierLibrary.Models;
 using AgsVerifierLibrary.Rules;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace AgsVerifierLibrary
@@ -35,9 +36,9 @@ namespace AgsVerifierLibrary
 
                 return true;
             }
-            catch (System.Exception)
+            catch (System.Exception e)
             {
-                return false;
+                throw new System.Exception(e.Message);
             }
         }
     }

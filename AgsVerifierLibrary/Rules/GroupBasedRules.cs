@@ -258,25 +258,29 @@ namespace AgsVerifierLibrary.Rules
                 });
             }
 
-            foreach (var row in group.Rows)
-            {
-                string str = row.ToStringByStatus(AgsStatus.KEY);
+            var duplicateKeys = group.Rows.GroupBy(r => r.ToStringByStatus(AgsStatus.KEY)).Where(g => g.Count() > 1);
 
-                if (group.Rows.Count(r => r.ToStringByStatus(AgsStatus.KEY) == str) > 1)
+            if (duplicateKeys.Any())
+            {
+                foreach (var duplicateKey in duplicateKeys)
                 {
-                    _errors.Add(new RuleError()
+                    foreach (var row in duplicateKey)
                     {
-                        Status = "Fail",
-                        RuleName = "10a",
-                        RuleId = 1011,
-                        Group = group.Name,
-                        RowNumber = (int)row["Index"],
-                        Message = $"Duplicate key field combination: {str}",
-                    });
+                        _errors.Add(new RuleError()
+                        {
+                            Status = "Fail",
+                            RuleName = "10a",
+                            RuleId = 1011,
+                            Group = group.Name,
+                            RowNumber = (int)row["Index"],
+                            Message = $"Duplicate key field combination: {duplicateKey.Key}",
+                        });
+                    }
                 }
             }
         }
 
+        // TODO OPTIMISE SOMEHOW!!
         /// <summary>
         /// Some HEADINGs are marked as REQUIRED.REQUIRED fields must appear in the data GROUPs where they are indicated in the AGS FORMAT DATA DICTIONARY.
         /// These fields require data entry and cannot be null(i.e.left blank or empty).
@@ -794,26 +798,62 @@ namespace AgsVerifierLibrary.Rules
 
             var abbrCodes = abbrGroup["ABBR_CODE"].Data.Distinct();
 
+            string[] exclusion = new string[] { string.Empty, null, "HEADING" };
+
             foreach (var paTypeColumn in allPaTypeColumns)
             {
-                foreach (var row in paTypeColumn.Group.Rows)
+                var paTypeRows = paTypeColumn.Group.Rows.GroupBy(r => r[paTypeColumn.Heading]);
+
+                var paTypeNotInAbbrGroups = paTypeRows.Where(k => abbrCodes.Contains(k.Key) == false && exclusion.Contains(k.Key) == false);
+
+                if (paTypeNotInAbbrGroups.Any())
                 {
-                    if (row[paTypeColumn.Heading].ToString().Contains(concatenator))
-                        Rule16a(paTypeColumn, row, concatenator, abbrCodes);
-
-                    if (abbrCodes.Contains(row[paTypeColumn.Heading]))
-                        continue;
-
-                    _errors.Add(new RuleError()
+                    foreach (var paTypeNotInAbbrGroup in paTypeNotInAbbrGroups)
                     {
-                        Status = "Fail",
-                        RuleName = "16",
-                        RuleId = 1601,
-                        Group = "ABBR",
-                        Field = paTypeColumn.Heading,
-                        RowNumber = abbrGroup.GroupRow,
-                        Message = $"\"{row[paTypeColumn.Heading]}\" under {paTypeColumn.Heading} in {paTypeColumn.Group.Name} not found in ABBR table.",
-                    });
+                        foreach (var row in paTypeNotInAbbrGroup)
+                        {
+                            _errors.Add(new RuleError()
+                            {
+                                Status = "Fail",
+                                RuleName = "16",
+                                RuleId = 1601,
+                                Group = "ABBR",
+                                Field = paTypeColumn.Heading,
+                                RowNumber = abbrGroup.GroupRow,
+                                Message = $"\"{row[paTypeColumn.Heading]}\" under {paTypeColumn.Heading} in {paTypeColumn.Group.Name} not found in ABBR table.",
+                            });
+                        }
+                    }
+                }
+
+                var paTypeConcatGroups = paTypeRows.Where(k => k.Key.ToString().Contains(concatenator));
+
+                if (paTypeConcatGroups.Any())
+                {
+                    foreach (var paTypeConcatGroup in paTypeConcatGroups)
+                    {
+                        var splitValues = paTypeConcatGroup.Key.ToString().Split(concatenator);
+
+                        foreach (var splitValue in splitValues)
+                        {
+                            if (abbrCodes.Contains(splitValue) == false)
+                            {
+                                foreach (var row in paTypeConcatGroup)
+                                {
+                                    _errors.Add(new RuleError()
+                                    {
+                                        Status = "Fail",
+                                        RuleName = "16a",
+                                        RuleId = 1610,
+                                        Group = "ABBR",
+                                        Field = paTypeColumn.Heading,
+                                        RowNumber = row.Index,
+                                        Message = $"Concatenated field \"{row[paTypeColumn.Heading]}\" contains \"{splitValue}\" under {paTypeColumn.Heading} in {paTypeColumn.Group.Name} not found in ABBR table.",
+                                    });
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

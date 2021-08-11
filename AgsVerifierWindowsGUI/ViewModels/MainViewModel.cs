@@ -3,14 +3,14 @@ using AgsVerifierLibrary.Enums;
 using AgsVerifierLibrary.Extensions;
 using AgsVerifierWindowsGUI.Actions;
 using AgsVerifierWindowsGUI.Commands;
+using System;
 using System.Windows;
 
 namespace AgsVerifierWindowsGUI.ViewModels
 {
     public class MainViewModel : BaseViewModel
     {
-        private readonly DataAccess _dataAccess;
-
+        private DataAccess _dataAccess;
         public RelayCommand OpenFileDialogCommand { get; private set; }
         public RelayCommand ValidateAgsCommand { get; private set; }
         public RelayCommand ExportValidationReportCommand { get; private set; }
@@ -18,8 +18,6 @@ namespace AgsVerifierWindowsGUI.ViewModels
 
         public MainViewModel()
         {
-            _dataAccess = new();
-
             OpenFileDialogCommand = new RelayCommand(OpenFileDialog);
             ValidateAgsCommand = new RelayCommand(ValidateAgs, CanValidateAgsRun);
             ExportValidationReportCommand = new RelayCommand(ExportValidationReport, CanExportValidationReport);
@@ -72,14 +70,21 @@ namespace AgsVerifierWindowsGUI.ViewModels
 
         public void OpenFileDialog(object obj)
         {
+            ErrorText = null;
+            ProcessAgsSuccess = false;
+
             InputFilePath = OpenFileDialogAction.Run();
         }
 
         public void ValidateAgs(object obj)
         {
+            _dataAccess = new();
+
+            DateTime started = DateTime.Now;
+
             ProcessAgsSuccess = _dataAccess.ValidateAgsFile(SelectedAgsVersion, InputFilePath);
 
-            ErrorText = GenerateValidationReportAction.Run(_dataAccess.Errors, InputFilePath, SelectedAgsVersion.Name());
+            ErrorText = GenerateValidationReportAction.Run(_dataAccess.Errors, started, InputFilePath, SelectedAgsVersion.Name());
         }
 
         private bool CanValidateAgsRun(object obj)

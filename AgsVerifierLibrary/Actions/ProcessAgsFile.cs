@@ -35,6 +35,7 @@ namespace AgsVerifierLibrary.Actions
         {
             CsvConfiguration csvConfig = new(CultureInfo.InvariantCulture)
             {
+                BadDataFound = null,
                 IgnoreBlankLines = false,
                 Delimiter = ",",
                 Quote = '"',
