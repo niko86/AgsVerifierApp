@@ -15,8 +15,7 @@ namespace AgsVerifierLibrary.Extensions
         public static void SetColumnDescriptor(this AgsColumn column, AgsDescriptor descriptor, string value)
         {
             _columnProperties
-                .FirstOrDefault(p => p.Name
-                    .Contains(descriptor.Name(), StringComparison.InvariantCultureIgnoreCase))
+                .FirstOrDefault(p => p.Name.ToUpper() == descriptor.Name())
                 .SetValue(column, value, null);
         }
 
@@ -27,14 +26,9 @@ namespace AgsVerifierLibrary.Extensions
 
         public static IEnumerable<string> ReturnDescriptor(this IEnumerable<AgsColumn> columns, AgsDescriptor descriptor)
         {
-
-            PropertyInfo propertyInfo = _columnProperties
-                .FirstOrDefault(p => p.Name
-                    .Contains(descriptor.Name(), StringComparison.InvariantCultureIgnoreCase));
-
-            var output = columns.Select(x => propertyInfo.GetValue(x).ToString());
-
-            return output.Where(x => !_exclusions.Contains(x));
+            PropertyInfo propertyInfo = _columnProperties.FirstOrDefault(p => p.Name.ToUpper() == descriptor.Name());
+            
+            return columns.Where(x => !_exclusions.Contains(x.Heading)).Select(x => propertyInfo.GetValue(x).ToString());
         }
 
         public static IEnumerable<dynamic> MergeData(this IEnumerable<AgsColumn> columns)

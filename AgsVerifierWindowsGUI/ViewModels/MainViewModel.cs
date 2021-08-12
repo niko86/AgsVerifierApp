@@ -4,6 +4,8 @@ using AgsVerifierLibrary.Extensions;
 using AgsVerifierWindowsGUI.Actions;
 using AgsVerifierWindowsGUI.Commands;
 using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace AgsVerifierWindowsGUI.ViewModels
@@ -76,20 +78,25 @@ namespace AgsVerifierWindowsGUI.ViewModels
             InputFilePath = OpenFileDialogAction.Run();
         }
 
-        public void ValidateAgs(object obj)
+        public async void ValidateAgs(object obj)
         {
             _dataAccess = new();
 
-            DateTime started = DateTime.Now;
+            var timestamp = DateTime.Now;
+            var watch = Stopwatch.StartNew();
 
-            ProcessAgsSuccess = _dataAccess.ValidateAgsFile(SelectedAgsVersion, InputFilePath);
+            ProcessAgsSuccess = await Task.Run(() => _dataAccess.ValidateAgsFile(SelectedAgsVersion, InputFilePath));
 
-            ErrorText = GenerateValidationReportAction.Run(_dataAccess.Errors, started, InputFilePath, SelectedAgsVersion.Name());
+            ValidateAgsCommand.RaiseCanExecuteChanged();
+
+            watch.Stop();
+
+            ErrorText = GenerateValidationReportAction.Run(_dataAccess.Errors, timestamp, watch.Elapsed, InputFilePath, SelectedAgsVersion.Name());
         }
 
         private bool CanValidateAgsRun(object obj)
         {
-            return InputFilePath is not null;
+            return InputFilePath is not null && ProcessAgsSuccess is false;
         }
 
         public void ExportValidationReport(object obj)

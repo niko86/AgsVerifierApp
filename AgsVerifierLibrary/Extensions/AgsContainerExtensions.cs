@@ -10,19 +10,19 @@ namespace AgsVerifierLibrary.Extensions
     {
         public static IEnumerable<string> ReturnAllHeadings(this AgsContainer ags)
         {
-            string[] exclusion = new string[] { AgsDescriptor.HEADING.Name(), string.Empty, null };
+            string[] exclusion = new string[] { AgsDescriptor.HEADING.ToString(), string.Empty, null };
             return ags.Groups.SelectMany(g => g.Columns.Where(c => !exclusion.Contains(c.Heading)).Select(x => x.Heading));
         }
 
         public static IEnumerable<string> ReturnAllUnits(this AgsContainer ags)
         {
-            string[] exclusion = new string[] { AgsDescriptor.UNIT.Name(), string.Empty, null };
+            string[] exclusion = new string[] { AgsDescriptor.UNIT.ToString(), string.Empty, null };
             return ags.Groups.SelectMany(g => g.Columns.Where(c => !exclusion.Contains(c.Unit)).Select(x => x.Unit));
         }
 
         public static IEnumerable<string> ReturnAllTypes(this AgsContainer ags)
         {
-            string[] exclusion = new string[] { AgsDescriptor.TYPE.Name(), string.Empty, null };
+            string[] exclusion = new string[] { AgsDescriptor.TYPE.ToString(), string.Empty, null };
             return ags.Groups.SelectMany(g => g.Columns.Where(c => !exclusion.Contains(c.Type)).Select(x => x.Type));
         }
 

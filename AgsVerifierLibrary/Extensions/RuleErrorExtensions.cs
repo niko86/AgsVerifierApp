@@ -11,7 +11,7 @@ namespace AgsVerifierLibrary.Extensions
     {
         public static bool Contains(this IEnumerable<RuleError> errors, string text)
         {
-            return errors.Select(e => e.RuleName).Contains(text);
+            return errors.Any(e => e.RuleName == text);
         }
 
         public static bool Contains(this IEnumerable<RuleError> errors, int id)

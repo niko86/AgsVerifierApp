@@ -34,5 +34,10 @@ namespace AgsVerifierWindowsGUI.Commands
         {
             _execute(parameter);
         }
+
+        public void RaiseCanExecuteChanged()
+        {
+            CommandManager.InvalidateRequerySuggested();
+        }
     }
 }

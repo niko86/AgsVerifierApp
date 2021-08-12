@@ -11,9 +11,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
         <GroupBox Grid.Row="0" Header="AGS File Selection" Margin="10 5" Padding="5">
             <Grid>
@@ -32,8 +30,7 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -56,7 +53,7 @@
                         MinWidth="90" Command="{Binding ExportAgsToExcelCommand}" Content="Export xlsx" />
 
                 <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" Margin="5" Padding="10 5" IsReadOnly="True"
-                         Height="250" VerticalScrollBarVisibility="Visible" TextWrapping="Wrap"
+                         MinHeight="250" VerticalScrollBarVisibility="Visible" TextWrapping="Wrap"
                          Text="{Binding Path=ErrorText}" />
 
             </Grid>

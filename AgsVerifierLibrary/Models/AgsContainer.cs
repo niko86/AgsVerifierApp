@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace AgsVerifierLibrary.Models
 {
@@ -29,6 +30,9 @@ namespace AgsVerifierLibrary.Models
             set => _groups[_groups.FindIndex(c => c.Name == groupName)] = value;
         }
 
+        public int Count => _groups.Count;
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         public IEnumerator<AgsGroup> GetEnumerator()
         {
             for (int i = 0; i < Count; i++)
@@ -36,9 +40,5 @@ namespace AgsVerifierLibrary.Models
                 yield return _groups[i];
             }
         }
-
-        public int Count => _groups.Count;
-
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }

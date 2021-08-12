@@ -10,13 +10,14 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace AgsVerifierLibrary.Actions
 {
     public class ProcessAgsFile
     {
         private static readonly string[] _parentGroupExceptions = new string[] { "PROJ", "TRAN", "ABBR", "DICT", "UNIT", "TYPE", "LOCA", "FILE", "LBSG", "PREM", "STND" };
-
+        private readonly AgsVersion _version;
         private readonly AgsContainer _ags;
         private readonly List<RuleError> _ruleErrors;
         private readonly AgsContainer _stdDictionary;
@@ -24,32 +25,28 @@ namespace AgsVerifierLibrary.Actions
 
         public ProcessAgsFile(AgsVersion version, AgsContainer ags, List<RuleError> ruleErrors = null, AgsContainer stdDictionary = null)
         {
+            _version = version;
             _ags = ags;
             _ruleErrors = ruleErrors;
             _stdDictionary = stdDictionary;
-
-            Process(version);
         }
 
-        private void Process(AgsVersion version)
+        public void Process()
         {
             CsvConfiguration csvConfig = new(CultureInfo.InvariantCulture)
             {
                 BadDataFound = null,
-                IgnoreBlankLines = false,
+                IgnoreBlankLines = true,
                 Delimiter = ",",
                 Quote = '"',
             };
 
             using StreamReader reader = _stdDictionary is null
-                ? new(new MemoryStream(Resources.ResourceManager.GetObject(version.ToString(), CultureInfo.InvariantCulture) as byte[]))
+                ? new(new MemoryStream(Resources.ResourceManager.GetObject(_version.ToString(), CultureInfo.InvariantCulture) as byte[]))
                 : new(_ags.FilePath);
             using CsvReader csv = new(reader, csvConfig);
             while (csv.Read())
             {
-                if (csv.Parser.RawRecord == Environment.NewLine)
-                    continue;
-
                 switch (csv.GetField(0))
                 {
                     case "GROUP":

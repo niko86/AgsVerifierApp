@@ -1,11 +1,9 @@
 ﻿using AgsVerifierLibrary.Actions;
-using AgsVerifierLibrary.Comparers;
 using AgsVerifierLibrary.Enums;
 using AgsVerifierLibrary.Models;
 using AgsVerifierLibrary.Rules;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Threading.Tasks;
 
 namespace AgsVerifierLibrary
 {
@@ -22,7 +20,7 @@ namespace AgsVerifierLibrary
             StdDictionary = new AgsContainer();
         }
 
-        public bool ValidateAgsFile(AgsVersion version, string filePath)
+        public async Task<bool> ValidateAgsFile(AgsVersion version, string filePath)
         {
             // TODO make api more fluent and check that in nested checks that continue/return are being used correctly. Too complex logic.
             // TODO AGS 4.0.4 do i need to check types if exist in std dictionary?
@@ -30,15 +28,22 @@ namespace AgsVerifierLibrary
             {
                 Ags.FilePath = filePath;
 
-                _ = new ProcessAgsFile(version, StdDictionary);
-                _ = new ProcessAgsFile(version, Ags, Errors, StdDictionary);
-                _ = new GroupBasedRules(Ags, Errors, StdDictionary);
+                ProcessAgsFile processStdDictionary = new(version, StdDictionary);
+                await Task.Run(() => processStdDictionary.Process());
+
+                ProcessAgsFile processAgsFile = new(version, Ags, Errors, StdDictionary);
+                await Task.Run(() => processAgsFile.Process());
+
+                GroupBasedRules groupRules = new(Ags, Errors, StdDictionary);
+                await Task.Run(() => groupRules.CheckGroups());
+                //groupRules.CheckGroups();
 
                 return true;
             }
             catch (System.Exception e)
             {
                 throw new System.Exception(e.Message);
+                //return false;
             }
         }
     }

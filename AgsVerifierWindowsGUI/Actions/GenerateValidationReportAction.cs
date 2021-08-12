@@ -3,12 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace AgsVerifierWindowsGUI.Actions
 {
     public static class GenerateValidationReportAction
     {
-        public static string Run(List<RuleError> errors, DateTime started, string inputFilePath, string selectedAgsVersion)
+        public static string Run(List<RuleError> errors, DateTime timestamp, TimeSpan elapsed, string inputFilePath, string selectedAgsVersion)
         {
             StringBuilder sb = new();
 
@@ -17,7 +18,7 @@ namespace AgsVerifierWindowsGUI.Actions
             sb.AppendLine($"AGS validation report ");
             sb.AppendLine($"File to be validated: {inputFilePath}");
             sb.AppendLine($"Validation carried out using AGS Standard Dictionary {selectedAgsVersion}");
-            sb.AppendLine($"Started: {started:G}");
+            sb.AppendLine($"Started at {timestamp}");
             sb.AppendLine(new string('-', 140));
             sb.AppendLine($"{errors.Count} errors identified:");
             sb.AppendLine();
@@ -34,7 +35,7 @@ namespace AgsVerifierWindowsGUI.Actions
                 sb.AppendLine();
             }
             sb.AppendLine(new string('-', 140));
-            sb.AppendLine($"Finished: {DateTime.Now:G}");
+            sb.AppendLine($"Finished: Process took {elapsed.TotalSeconds:N3} seconds");
 
             return sb.ToString();
         }

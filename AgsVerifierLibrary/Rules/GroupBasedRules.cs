@@ -1,11 +1,13 @@
 ﻿using AgsVerifierLibrary.Enums;
 using AgsVerifierLibrary.Extensions;
 using AgsVerifierLibrary.Models;
+using CsvHelper.Configuration.Attributes;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace AgsVerifierLibrary.Rules
 {
@@ -23,14 +25,12 @@ namespace AgsVerifierLibrary.Rules
             _ags = ags;
             _stdDictionary = stdDictionary;
             _errors = errors;
-            CheckGroups();
         }
 
-        private void CheckGroups()
+        public void CheckGroups()
         {
             Rule11(); // Covered by other rules
             Rule12(); // Covered by other rules
-
             Rule11a(); // TRAN group
             Rule11b(); // TRAN group
             Rule13(); // PROJ group
@@ -44,19 +44,24 @@ namespace AgsVerifierLibrary.Rules
 
             foreach (var group in _ags.Groups)
             {
-                Rule2(group);
-                Rule2b(group);
-                Rule7(group);
-                Rule9(group);
-                Rule10a(group);
-                Rule10b(group);
-                Rule10c(group);
-                Rule11c(group);
-                Rule18a(group);
-                Rule19(group);
-                Rule19a(group);
-                Rule19b(group);
+                RunGroupMethods(group);
             }
+        }
+
+        private void RunGroupMethods(AgsGroup group)
+        {
+            Rule2(group);
+            Rule2b(group);
+            Rule7(group);
+            Rule9(group);
+            Rule10a(group);
+            Rule10b(group);
+            Rule10c(group);
+            Rule11c(group);
+            Rule18a(group);
+            Rule19(group);
+            Rule19a(group);
+            Rule19b(group);
         }
 
         /// <summary>
@@ -280,7 +285,6 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
-        // TODO OPTIMISE SOMEHOW!!
         /// <summary>
         /// Some HEADINGs are marked as REQUIRED.REQUIRED fields must appear in the data GROUPs where they are indicated in the AGS FORMAT DATA DICTIONARY.
         /// These fields require data entry and cannot be null(i.e.left blank or empty).
@@ -307,22 +311,19 @@ namespace AgsVerifierLibrary.Rules
                 }
             }
 
-            foreach (var row in group.Rows)
-            {
-                string str = row.ToStringByStatus(AgsStatus.REQUIRED);
+            var requiredRows = group.Rows.Where(r => r.ToStringByStatus(AgsStatus.REQUIRED).Contains("???"));
 
-                if (str.Contains("???"))
+            foreach (var requiredRow in requiredRows)
+            {
+                _errors.Add(new RuleError()
                 {
-                    _errors.Add(new RuleError()
-                    {
-                        Status = "Fail",
-                        RuleName = "10b",
-                        RuleId = 1021,
-                        Group = group.Name,
-                        RowNumber = (int)row["Index"],
-                        Message = $"REQUIRED field(s) containing empty values: ...{str}",
-                    });
-                }
+                    Status = "Fail",
+                    RuleName = "10b",
+                    RuleId = 1021,
+                    Group = group.Name,
+                    RowNumber = (int)requiredRow["Index"],
+                    Message = $"REQUIRED field(s) containing empty values: ...{requiredRow.ToStringByStatus(AgsStatus.REQUIRED)}",
+                });
             }
         }
 
@@ -864,26 +865,26 @@ namespace AgsVerifierLibrary.Rules
         ///  (ASCII character 43). Each abbreviation used in such combinations shall be listed separately in the ABBR GROUP.
         ///  e.g. "CP+RC" must have entries for both "CP" and "RC" in ABBR GROUP, together with their full definition.
         /// </summary>
-        private void Rule16a(AgsColumn column, AgsRow row, string concatenator, IEnumerable<dynamic> abbrCodes)
+        private void Rule16a()
         {
-            var splitValues = row[column.Heading].ToString().Split(concatenator);
+            //var splitValues = row[column.Heading].ToString().Split(concatenator);
 
-            foreach (var splitValue in splitValues)
-            {
-                if (abbrCodes.Contains(splitValue) == false)
-                {
-                    _errors.Add(new RuleError()
-                    {
-                        Status = "Fail",
-                        RuleName = "16a",
-                        RuleId = 1610,
-                        Group = "ABBR",
-                        Field = column.Heading,
-                        RowNumber = row.Index,
-                        Message = $"Concatenated field \"{row[column.Heading]}\" contains \"{splitValue}\" under {column.Heading} in {column.Group.Name} not found in ABBR table.",
-                    });
-                }
-            }
+            //foreach (var splitValue in splitValues)
+            //{
+            //    if (abbrCodes.Contains(splitValue) == false)
+            //    {
+            //        _errors.Add(new RuleError()
+            //        {
+            //            Status = "Fail",
+            //            RuleName = "16a",
+            //            RuleId = 1610,
+            //            Group = "ABBR",
+            //            Field = column.Heading,
+            //            RowNumber = row.Index,
+            //            Message = $"Concatenated field \"{row[column.Heading]}\" contains \"{splitValue}\" under {column.Heading} in {column.Group.Name} not found in ABBR table.",
+            //        });
+            //    }
+            //}
         }
 
         /// <summary>
@@ -1141,7 +1142,6 @@ namespace AgsVerifierLibrary.Rules
                 }
             }
         }
-
         // TODO edit so for loop with i uses rows... maybe getgroups with headings ...
         /// <summary>
         /// Additional computer files (e.g. digital images) can be included within a data submission. Each such file shall be defined in a FILE GROUP.

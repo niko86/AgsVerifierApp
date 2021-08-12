@@ -10,19 +10,17 @@ namespace AgsVerifierLibrary.Extensions
     {
         public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, string filter)
         {
-            return rows?.Where(d => d.Contains(key, filter));
+            return rows?.Where(d => (string)d[key] == filter);
         }
 
         public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, AgsDescriptor descriptor)
         {
-            return rows
-                .Where(d => (string)d[key] == descriptor.Name());
+            return rows?.Where(d => (string)d[key] == descriptor.Name());
         }
 
         public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, AgsStatus status)
         {
-            return rows
-                .Where(d => (string)d[key] == status.Name());
+            return rows?.Where(d => (string)d[key] == status.Name());
         }
 
         public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, int filter)
@@ -57,10 +55,10 @@ namespace AgsVerifierLibrary.Extensions
 
                 for (int i = 0; i < row.Count(); i++)
                 {
-                    if (i == 0) // Skips index column, inelegant hack
+                    if (row.Group[i].Status is null) // Skips index and heading column, inelegant?
                         continue;
 
-                    if (row.Group[i].Status == AgsStatus.REQUIRED.Name() && string.IsNullOrWhiteSpace(row[i].ToString()))
+                    if (row.Group[i].Status.Contains(AgsStatus.REQUIRED.Name()) && string.IsNullOrWhiteSpace(row[i].ToString()))
                     {
                         temp.Add("???");
                         continue;
