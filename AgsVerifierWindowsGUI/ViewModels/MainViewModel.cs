@@ -6,7 +6,6 @@ using AgsVerifierWindowsGUI.Commands;
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
-using System.Windows;
 
 namespace AgsVerifierWindowsGUI.ViewModels
 {
@@ -26,7 +25,7 @@ namespace AgsVerifierWindowsGUI.ViewModels
             ExportAgsToExcelCommand = new RelayCommand(ExportAgsToExcel, CanExportAgsToExcel);
         }
 
-        private AgsVersion _selectedAgsVersion = AgsVersion.V404;
+    private AgsVersion _selectedAgsVersion = AgsVersion.V404;
         public AgsVersion SelectedAgsVersion
         {
             get => _selectedAgsVersion;
@@ -34,6 +33,10 @@ namespace AgsVerifierWindowsGUI.ViewModels
             {
                 _selectedAgsVersion = value;
                 OnPropertyChanged(nameof(SelectedAgsVersion));
+
+                _dataAccess = null;
+                ErrorText = null;
+                ProcessAgsSuccess = false;
             }
         }
 
@@ -59,6 +62,18 @@ namespace AgsVerifierWindowsGUI.ViewModels
             }
         }
 
+        private bool _activeIndeterminate;
+        public bool ActiveIndeterminate
+        {
+            get => _activeIndeterminate;
+            set
+            {
+                _activeIndeterminate = value;
+                OnPropertyChanged(nameof(ActiveIndeterminate));
+            }
+        }
+        
+
         private string _errorText;
         public string ErrorText
         {
@@ -82,16 +97,20 @@ namespace AgsVerifierWindowsGUI.ViewModels
         {
             _dataAccess = new();
 
-            var timestamp = DateTime.Now;
+            var timestamp = DateTime.UtcNow;
             var watch = Stopwatch.StartNew();
+            ActiveIndeterminate = true;
+
+            ErrorText += GenerateInitialValidationTextAction.Run(timestamp, InputFilePath, SelectedAgsVersion);
 
             ProcessAgsSuccess = await Task.Run(() => _dataAccess.ValidateAgsFile(SelectedAgsVersion, InputFilePath));
 
+            watch.Stop();
+            ActiveIndeterminate = false;
+
             ValidateAgsCommand.RaiseCanExecuteChanged();
 
-            watch.Stop();
-
-            ErrorText = GenerateValidationReportAction.Run(_dataAccess.Errors, timestamp, watch.Elapsed, InputFilePath, SelectedAgsVersion.Name());
+            ErrorText += GenerateValidationReportAction.Run(_dataAccess.Errors, watch.Elapsed);
         }
 
         private bool CanValidateAgsRun(object obj)

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 
 namespace AgsVerifierLibrary.Enums
@@ -20,8 +21,8 @@ namespace AgsVerifierLibrary.Enums
                     FieldInfo fi = value.GetType().GetField(value.ToString());
                     if (fi != null)
                     {
-                        var attributes = (DescriptionAttribute[])fi.GetCustomAttributes(typeof(DescriptionAttribute), false);
-                        return ((attributes.Length > 0) && (!String.IsNullOrEmpty(attributes[0].Description))) ? attributes[0].Description : value.ToString();
+                        var attributes = (DisplayAttribute[])fi.GetCustomAttributes(typeof(DisplayAttribute), false);
+                        return ((attributes.Length > 0) && (!string.IsNullOrEmpty(attributes[0].GetName()))) ? attributes[0].GetName() : value.ToString();
                     }
                 }
 

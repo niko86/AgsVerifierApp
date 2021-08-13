@@ -9,17 +9,12 @@ namespace AgsVerifierWindowsGUI.Actions
 {
     public static class GenerateValidationReportAction
     {
-        public static string Run(List<RuleError> errors, DateTime timestamp, TimeSpan elapsed, string inputFilePath, string selectedAgsVersion)
+        public static string Run(List<RuleError> errors, TimeSpan elapsed)
         {
             StringBuilder sb = new();
 
             var groupedErrors = errors.OrderBy(i => i.RuleId).GroupBy(k => k.RuleName);
 
-            sb.AppendLine($"AGS validation report ");
-            sb.AppendLine($"File to be validated: {inputFilePath}");
-            sb.AppendLine($"Validation carried out using AGS Standard Dictionary {selectedAgsVersion}");
-            sb.AppendLine($"Started at {timestamp}");
-            sb.AppendLine(new string('-', 140));
             sb.AppendLine($"{errors.Count} errors identified:");
             sb.AppendLine();
 

@@ -7,7 +7,7 @@
         xmlns:ext="clr-namespace:AgsVerifierWindowsGUI.Extensions"
         xmlns:enumTypes="clr-namespace:AgsVerifierLibrary.Enums;assembly=AgsVerifierLibrary"
         mc:Ignorable="d" Title="AGS File Validator" 
-        Height="470" Width="800" MinHeight="470" MinWidth="800">
+        Height="450" Width="800" MinHeight="450" MinWidth="800">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -33,7 +33,8 @@
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="3*"/>
+                    <ColumnDefinition Width="1*"/>
                     <ColumnDefinition Width="auto"/>
                     <ColumnDefinition Width="auto"/>
                     <ColumnDefinition Width="auto"/>
@@ -43,17 +44,19 @@
                           ItemsSource="{Binding Source={ext:EnumBindingSource {x:Type enumTypes:AgsVersion}}}" 
                           SelectedItem="{Binding SelectedAgsVersion, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-                <Button Grid.Row="0" Grid.Column="1" Margin="5" Padding="10 5" HorizontalAlignment="Center" VerticalAlignment="Center"
-                        MinWidth="90" Command="{Binding ValidateAgsCommand}" Content="Validate File" />
+                <ProgressBar Grid.Row="0" Grid.Column="1" Margin="5" IsIndeterminate="{Binding ActiveIndeterminate}"  />
 
                 <Button Grid.Row="0" Grid.Column="2" Margin="5" Padding="10 5" HorizontalAlignment="Center" VerticalAlignment="Center"
-                        MinWidth="90" Command="{Binding ExportValidationReportCommand}" Content="Export Report" />
+                        MinWidth="90" Command="{Binding ValidateAgsCommand}" Content="Validate File" />
 
                 <Button Grid.Row="0" Grid.Column="3" Margin="5" Padding="10 5" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        MinWidth="90" Command="{Binding ExportValidationReportCommand}" Content="Export Report" />
+
+                <Button Grid.Row="0" Grid.Column="4" Margin="5" Padding="10 5" HorizontalAlignment="Center" VerticalAlignment="Center"
                         MinWidth="90" Command="{Binding ExportAgsToExcelCommand}" Content="Export xlsx" />
 
-                <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="4" Margin="5" Padding="10 5" IsReadOnly="True"
-                         MinHeight="250" VerticalScrollBarVisibility="Visible" TextWrapping="Wrap"
+                <TextBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" Margin="5" Padding="10 5" IsReadOnly="True"
+                         VerticalScrollBarVisibility="Visible" TextWrapping="Wrap"
                          Text="{Binding Path=ErrorText}" />
 
             </Grid>

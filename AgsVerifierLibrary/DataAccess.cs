@@ -36,7 +36,6 @@ namespace AgsVerifierLibrary
 
                 GroupBasedRules groupRules = new(Ags, Errors, StdDictionary);
                 await Task.Run(() => groupRules.CheckGroups());
-                //groupRules.CheckGroups();
 
                 return true;
             }
