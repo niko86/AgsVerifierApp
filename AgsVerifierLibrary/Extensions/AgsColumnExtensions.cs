@@ -19,6 +19,16 @@ namespace AgsVerifierLibrary.Extensions
                 .SetValue(column, value, null);
         }
 
+        public static bool Contains(this AgsColumn column, string value)
+        {
+            return column.Data.Contains(value);
+        }
+
+        public static AgsRow Row(this AgsColumn column, int index)
+        {
+            return column.Group.Rows[index];
+        }
+
         public static IEnumerable<dynamic> ReturnDataDistinctNonBlank(this AgsColumn column)
         {
             return column?.Data.Where(i => string.IsNullOrWhiteSpace(i) == false).Distinct();
@@ -41,7 +51,7 @@ namespace AgsVerifierLibrary.Extensions
         {
             for (int i = 0; i < columns.FirstOrDefault().Data.Count; i++)
             {
-                foreach (var column in columns)
+                foreach (AgsColumn column in columns)
                 {
                     yield return string.Join(delimiter, columns.Select(c => c.Data[i]));
                 }

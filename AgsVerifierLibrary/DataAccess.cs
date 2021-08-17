@@ -34,8 +34,11 @@ namespace AgsVerifierLibrary
                 ProcessAgsFile processAgsFile = new(version, Ags, Errors, StdDictionary);
                 await Task.Run(() => processAgsFile.Process());
 
-                GroupBasedRules groupRules = new(Ags, Errors, StdDictionary);
-                await Task.Run(() => groupRules.CheckGroups());
+                PerFileRules fileRules = new(Ags, Errors, StdDictionary);
+                await Task.Run(() => fileRules.Process());
+
+                PerGroupRules groupRules = new(Ags, Errors, StdDictionary);
+                await Task.Run(() => groupRules.Process());
 
                 return true;
             }

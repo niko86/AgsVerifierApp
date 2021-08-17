@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace AgsVerifierLibrary.Rules
 {
-    public static class RowBasedRules
+    public static class PerRowRules
     {
         private static readonly Regex _regexCsvRowSplit = new(@",(?=(?:""[^""]*?(?:[^""]*)*))|,(?=[^"", ]+(?:, |$))", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex _regexOnlyWhiteSpace = new(@"^\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);

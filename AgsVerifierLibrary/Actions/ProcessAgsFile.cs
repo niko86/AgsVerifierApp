@@ -69,7 +69,7 @@ namespace AgsVerifierLibrary.Actions
                 }
 
                 if (_stdDictionary is not null)
-                    RowBasedRules.CheckRow(csv, _ruleErrors, _currentGroup);
+                    PerRowRules.CheckRow(csv, _ruleErrors, _currentGroup);
             }
 
             FinalAssignments();

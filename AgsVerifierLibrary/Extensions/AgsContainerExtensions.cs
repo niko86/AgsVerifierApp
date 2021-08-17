@@ -28,7 +28,7 @@ namespace AgsVerifierLibrary.Extensions
 
         public static IEnumerable<AgsColumn> GetAllColumnsOfType(this AgsContainer ags, AgsDataType dataType)
         {
-            return ags.Groups.SelectMany(g => g.Columns.Where(c => c.Type == dataType.Name()));
+            return ags.Groups.SelectMany(g => g.Columns.Where(c => c.Type is not null && c.Type.Contains(dataType.ToString())));
         }
 
         public static IEnumerable<AgsColumn> GetAllColumnsOfHeading(this AgsContainer ags, string headingName)
@@ -36,9 +36,14 @@ namespace AgsVerifierLibrary.Extensions
             return ags.Groups.SelectMany(g => g.Columns.Where(c => c.Heading == headingName));
         }
 
-        public static IEnumerable<AgsColumn> GetAllColumnsOfHeading(this AgsContainer ags, string headingName, string excludingGroup)
+        public static IEnumerable<AgsColumn> GetAllColumnsOfHeading(this AgsContainer ags, string headingName, AgsGroup excludingGroup)
         {
-            return ags.Groups.SelectMany(g => g.Columns.Where(c => c.Group.Name != excludingGroup && c.Heading == headingName));
+            return ags.Groups.SelectMany(g => g.Columns.Where(c => c.Group != excludingGroup && c.Heading == headingName));
+        }
+
+        public static IEnumerable<AgsColumn> GetAllColumnsOfFixedNumericalType(this AgsContainer ags)
+        {
+            return ags.Groups.SelectMany(g => g.Columns.Where(c => c.Type is not null && (c.Type == AgsDataType.MC.ToString() ||  char.IsDigit(c.Type[0]))));
         }
 
         public static IEnumerable<string> ReturnGroupNames(this AgsContainer ags)
