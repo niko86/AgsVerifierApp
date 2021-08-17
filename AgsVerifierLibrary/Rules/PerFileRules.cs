@@ -54,6 +54,9 @@ namespace AgsVerifierLibrary.Rules
             {
                 for (int i = 0; i < column.Data.Count; i++)
                 {
+                    if (string.IsNullOrWhiteSpace(column.Data[i]))
+                        continue;
+
                     if (NumericChecks.NumericTypeIsValid(column.Type, column.Data[i]) == false)
                     {
                         _errors.Add(new RuleError()

@@ -1,10 +1,6 @@
 ﻿using AgsVerifierLibrary.Enums;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace AgsVerifierLibrary.Actions
 {
@@ -18,12 +14,13 @@ namespace AgsVerifierLibrary.Actions
         private static readonly Regex _fiveDP = new(@"^\d+\.\d{5}$", RegexOptions.Compiled);
         private static readonly Regex _sixDP = new(@"^\d+\.\d{6}$", RegexOptions.Compiled);
 
-        private static readonly Regex _oneSF = new(@"^-?(?=\d{1}(?:[.,]0+)?0*$|(?:(?=.{1,2}0*$)(?:\d+[.,]\d+))).+$", RegexOptions.Compiled);
-        private static readonly Regex _twoSF = new(@"^-?(?=\d{2}(?:[.,]0+)?0*$|(?:(?=.{2,3}0*$)(?:\d+[.,]\d+))).+$", RegexOptions.Compiled);
-        private static readonly Regex _threeSF = new(@"^-?(?=\d{3}(?:[.,]0+)?0*$|(?:(?=.{3,4}0*$)(?:\d+[.,]\d+))).+$", RegexOptions.Compiled);
-        private static readonly Regex _fourSF = new(@"^-?(?=\d{4}(?:[.,]0+)?0*$|(?:(?=.{4,5}0*$)(?:\d+[.,]\d+))).+$", RegexOptions.Compiled);
-        private static readonly Regex _fiveSF = new(@"^-?(?=\d{5}(?:[.,]0+)?0*$|(?:(?=.{5,6}0*$)(?:\d+[.,]\d+))).+$", RegexOptions.Compiled);
-        private static readonly Regex _sixSF = new(@"^-?(?=\d{6}(?:[.,]0+)?0*$|(?:(?=.{6,7}0*$)(?:\d+[.,]\d+))).+$", RegexOptions.Compiled);
+        // Below regex from https://stackoverflow.com/q/26231423/3653306
+        private static readonly Regex _oneSF = new(@"^(?!(?:.*[1-9](\.?[0-9]){1,}))([-+]?\d+\.?\d*?)$", RegexOptions.Compiled);
+        private static readonly Regex _twoSF = new(@"^(?!(?:.*[1-9](\.?[0-9]){2,}))([-+]?\d+\.?\d*?)$", RegexOptions.Compiled);
+        private static readonly Regex _threeSF = new(@"^(?!(?:.*[1-9](\.?[0-9]){3,}))([-+]?\d+\.?\d*?)$", RegexOptions.Compiled);
+        private static readonly Regex _fourSF = new(@"^(?!(?:.*[1-9](\.?[0-9]){4,}))([-+]?\d+\.?\d*?)$", RegexOptions.Compiled);
+        private static readonly Regex _fiveSF = new(@"^(?!(?:.*[1-9](\.?[0-9]){5,}))([-+]?\d+\.?\d*?)$", RegexOptions.Compiled);
+        private static readonly Regex _sixSF = new(@"^(?!(?:.*[1-9](\.?[0-9]){6,}))([-+]?\d+\.?\d*?)$", RegexOptions.Compiled);
 
         
         public static bool NumericTypeIsValid(string type, string value)
@@ -74,8 +71,8 @@ namespace AgsVerifierLibrary.Actions
             {
                 1 => _oneSF.IsMatch(value),
                 2 => _twoSF.IsMatch(value),
-                3 => _threeDP.IsMatch(value),
-                4 => _threeSF.IsMatch(value),
+                3 => _threeSF.IsMatch(value),
+                4 => _fourSF.IsMatch(value),
                 5 => _fiveSF.IsMatch(value),
                 6 => _sixSF.IsMatch(value),
                 _ => throw new NotImplementedException("Unsupported number of significant figures.")
