@@ -1,6 +1,5 @@
 ﻿using AgsVerifierLibrary;
 using AgsVerifierLibrary.Enums;
-using AgsVerifierLibrary.Extensions;
 using AgsVerifierWindowsGUI.Actions;
 using AgsVerifierWindowsGUI.Commands;
 using System;

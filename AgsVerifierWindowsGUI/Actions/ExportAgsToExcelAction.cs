@@ -1,11 +1,8 @@
-﻿using AgsVerifierLibrary.Enums;
-using AgsVerifierLibrary.Extensions;
-using AgsVerifierLibrary.Models;
+﻿using AgsVerifierLibrary.Models;
 using Microsoft.Win32;
 using OfficeOpenXml;
 using System;
 using System.IO;
-using System.Linq;
 using System.Windows;
 
 namespace AgsVerifierWindowsGUI.Actions

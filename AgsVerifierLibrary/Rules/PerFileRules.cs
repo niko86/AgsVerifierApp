@@ -31,16 +31,16 @@ namespace AgsVerifierLibrary.Rules
             Rule14(); // TRAN group
             Rule15(); // UNIT group
             Rule16(); // ABBR group
+            Rule16_1(); // NX column checks
             Rule17(); // TYPE group
             Rule18(); // DICT group
             Rule20(); // FILE group
 
             // Rule11(); Covered by other rules
             // Rule12(); Covered by other rules
-            //Rule16a(); Called by Rule 16
+            //Rule16a(); Implmented within Rule 16 method to reduce repetition
         }
 
-        // TODO - Add checks on SCI, DT and T. XN check needs to go into rule 16!
         /// <summary>
         ///  Data VARIABLEs shall be presented in the units of measurement and type that are described by 
         ///  the appropriate data field UNIT and data field TYPE defined at the start of the GROUP within 
@@ -306,7 +306,7 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
-        // TODO should i check if ABBR RCON holding the value of the heading matches or else return an error???
+        // TODO implement check for XN data type see page 7 in AGS 4.1 standard.
         /// <summary>
         ///  Each data file shall contain the ABBR GROUP when abbreviations have been included in the data file.
         ///  The abbreviations listed in the ABBR GROUP shall include definitions for all abbreviations entered
@@ -401,16 +401,18 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
-        // TODO implement check for XN data type see page 7 in AGS 4.1 standard.
         /// <summary>
         ///  Where multiple abbreviations are required to fully codify a FIELD, the abbreviations shall be separated by a defined
         ///  concatenation character. This single concatenation character shall be defined in TRAN_RCON. The default being "+"
         ///  (ASCII character 43). Each abbreviation used in such combinations shall be listed separately in the ABBR GROUP.
         ///  e.g. "CP+RC" must have entries for both "CP" and "RC" in ABBR GROUP, together with their full definition.
         /// </summary>
-        private void Rule16a()
+        private void Rule16_1()
         {
+            var allXnTypeColumns = _ags.GetAllColumnsOfType(AgsDataType.XN);
 
+            if (allXnTypeColumns is null)
+                return;
         }
 
         /// <summary>
@@ -472,7 +474,6 @@ namespace AgsVerifierLibrary.Rules
             }
         }
 
-        // TODO edit so for loop with i uses rows... maybe getgroups with headings ...
         /// <summary>
         /// Additional computer files (e.g. digital images) can be included within a data submission. Each such file shall be defined in a FILE GROUP.
         /// The additional files shall be transferred in a sub-folder named FILE. This FILE sub - folder shall contain additional sub-folders each
