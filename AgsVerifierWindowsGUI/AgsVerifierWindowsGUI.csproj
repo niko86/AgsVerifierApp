@@ -18,4 +18,8 @@
     <ProjectReference Include="..\AgsVerifierLibrary\AgsVerifierLibrary.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="AppPackages\" />
+  </ItemGroup>
+
 </Project>
