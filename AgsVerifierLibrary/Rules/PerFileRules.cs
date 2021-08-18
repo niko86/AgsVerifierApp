@@ -40,7 +40,7 @@ namespace AgsVerifierLibrary.Rules
             //Rule16a(); Called by Rule 16
         }
 
-        // TODO - Add checks on U, DT and T.
+        // TODO - Add checks on SCI, DT and T. XN check needs to go into rule 16!
         /// <summary>
         ///  Data VARIABLEs shall be presented in the units of measurement and type that are described by 
         ///  the appropriate data field UNIT and data field TYPE defined at the start of the GROUP within 
@@ -48,7 +48,7 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule8()
         {
-            var columns = _ags.GetAllColumnsOfFixedNumericalType();
+            var columns = _ags.GetAllColumnsOfNumericType();
 
             foreach (var column in columns)
             {
@@ -57,7 +57,7 @@ namespace AgsVerifierLibrary.Rules
                     if (string.IsNullOrWhiteSpace(column.Data[i]))
                         continue;
 
-                    if (NumericChecks.NumericTypeIsValid(column.Type, column.Data[i]) == false)
+                    if (NumericChecks.NumericTypeIsValid(column, column.Data[i]) == false)
                     {
                         _errors.Add(new RuleError()
                         {
