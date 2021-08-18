@@ -1,6 +1,6 @@
 # AgsVerifierApp
 
-A library and app for verifying that AGS files comply with the rule set created by the Association of Geotechnical and Geoenvironmental Specialists Data Format Commitee.
+A library and app written in C# for verifying that AGS files comply with the rule set created by the Association of Geotechnical and Geoenvironmental Specialists Data Format Commitee.
 
 https://www.ags.org.uk/data-format/
 
