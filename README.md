@@ -22,4 +22,4 @@ CsvHelper (Dual licensed under MS-PL and Apache 2) - https://github.com/JoshClos
 # License
 MIT Licence
 
-https://github.com/niko86/AgsVerifierApp/blob/master/LICENSE
+https://github.com/niko86/AgsVerifierApp/blob/master/LICENSE.md
