@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using AgsVerifierLibrary.Enums;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -8,6 +9,8 @@ namespace AgsVerifierLibrary.Models
     public class AgsContainer : IEnumerable<AgsGroup>
     {
         public string FilePath { get; set; }
+
+        public AgsVersion Version { get; set; }
 
         private List<AgsGroup> _groups = new();
 

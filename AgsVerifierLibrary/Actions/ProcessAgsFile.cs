@@ -17,21 +17,19 @@ namespace AgsVerifierLibrary.Actions
     public class ProcessAgsFile
     {
         private static readonly string[] _parentGroupExceptions = new string[] { "PROJ", "TRAN", "ABBR", "DICT", "UNIT", "TYPE", "LOCA", "FILE", "LBSG", "PREM", "STND" };
-        private readonly AgsVersion _version;
         private readonly AgsContainer _ags;
         private readonly List<RuleError> _ruleErrors;
         private readonly AgsContainer _stdDictionary;
         private AgsGroup _currentGroup;
 
-        public ProcessAgsFile(AgsVersion version, AgsContainer ags, List<RuleError> ruleErrors = null, AgsContainer stdDictionary = null)
+        public ProcessAgsFile(AgsContainer ags, List<RuleError> ruleErrors = null, AgsContainer stdDictionary = null)
         {
-            _version = version;
             _ags = ags;
             _ruleErrors = ruleErrors;
             _stdDictionary = stdDictionary;
         }
 
-        public void Process()
+        public void Process(StreamReader reader)
         {
             CsvConfiguration csvConfig = new(CultureInfo.InvariantCulture)
             {
@@ -41,9 +39,6 @@ namespace AgsVerifierLibrary.Actions
                 Quote = '"',
             };
 
-            using StreamReader reader = _stdDictionary is null
-                ? new(new MemoryStream(Resources.ResourceManager.GetObject(_version.ToString(), CultureInfo.InvariantCulture) as byte[]))
-                : new(_ags.FilePath);
             using CsvReader csv = new(reader, csvConfig);
             while (csv.Read())
             {

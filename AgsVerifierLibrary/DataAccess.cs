@@ -1,8 +1,11 @@
 ﻿using AgsVerifierLibrary.Actions;
 using AgsVerifierLibrary.Enums;
 using AgsVerifierLibrary.Models;
+using AgsVerifierLibrary.Properties;
 using AgsVerifierLibrary.Rules;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace AgsVerifierLibrary
@@ -20,33 +23,29 @@ namespace AgsVerifierLibrary
             StdDictionary = new AgsContainer();
         }
 
-        public async Task<bool> ValidateAgsFile(AgsVersion version, string filePath)
+        public async Task<bool> ValidateAgsFile(StreamReader stream, AgsVersion version, string filePath)
         {
-            // TODO make api more fluent and check that in nested checks that continue/return are being used correctly. Too complex logic.
-            // TODO AGS 4.0.4 do i need to check types if exist in std dictionary?
-            try
+            // Filepath only needed for Rule 20. Which would be useless in an API (unless a zip file?), work out how to remove/accomodate.
+
+            Ags.FilePath = filePath;
+
+            ProcessAgsFile processStdDictionary = new(StdDictionary);
+
+            using (StreamReader reader = new(new MemoryStream(Resources.ResourceManager.GetObject(version.ToString(), CultureInfo.InvariantCulture) as byte[])))
             {
-                Ags.FilePath = filePath;
-
-                ProcessAgsFile processStdDictionary = new(version, StdDictionary);
-                await Task.Run(() => processStdDictionary.Process());
-
-                ProcessAgsFile processAgsFile = new(version, Ags, Errors, StdDictionary);
-                await Task.Run(() => processAgsFile.Process());
-
-                PerFileRules fileRules = new(Ags, Errors, StdDictionary);
-                await Task.Run(() => fileRules.Process());
-
-                PerGroupRules groupRules = new(Ags, Errors, StdDictionary);
-                await Task.Run(() => groupRules.Process());
-
-                return true;
+                await Task.Run(() => processStdDictionary.Process(reader));
             }
-            catch (System.Exception e)
-            {
-                throw new System.Exception(e.Message);
-                //return false;
-            }
+
+            ProcessAgsFile processAgsFile = new(Ags, Errors, StdDictionary);
+            await Task.Run(() => processAgsFile.Process(stream));
+
+            PerFileRules fileRules = new(Ags, Errors, StdDictionary);
+            await Task.Run(() => fileRules.Process());
+
+            PerGroupRules groupRules = new(Ags, Errors, StdDictionary);
+            await Task.Run(() => groupRules.Process());
+
+            return true;
         }
     }
 }

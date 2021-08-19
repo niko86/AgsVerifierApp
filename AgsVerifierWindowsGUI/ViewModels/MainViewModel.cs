@@ -4,6 +4,7 @@ using AgsVerifierWindowsGUI.Actions;
 using AgsVerifierWindowsGUI.Commands;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace AgsVerifierWindowsGUI.ViewModels
@@ -102,7 +103,10 @@ namespace AgsVerifierWindowsGUI.ViewModels
 
             ErrorText += GenerateInitialValidationTextAction.Run(timestamp, InputFilePath, SelectedAgsVersion);
 
-            ProcessAgsSuccess = await Task.Run(() => _dataAccess.ValidateAgsFile(SelectedAgsVersion, InputFilePath));
+            using(StreamReader reader = new(InputFilePath))
+            {
+                ProcessAgsSuccess = await Task.Run(() => _dataAccess.ValidateAgsFile(reader, SelectedAgsVersion, InputFilePath));
+            }
 
             watch.Stop();
             ActiveIndeterminate = false;
