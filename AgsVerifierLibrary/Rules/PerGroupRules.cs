@@ -159,9 +159,25 @@ namespace AgsVerifierLibrary.Rules
         private void Rule9(AgsGroup group)
         {
             var stdDictTableFilteredByGroup = _stdDictionary["DICT"]["DICT_GRP"].FilterRowsBy(group.Name);
-            var fileDictTableFilteredByGroup = _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name);
-
             var stdDictTableName = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", AgsDescriptor.GROUP);
+            var stdDictTableHeadings = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", AgsDescriptor.HEADING).AllOf("DICT_HDNG");
+
+            if (stdDictTableName.Any() == false || stdDictTableHeadings.Any() == false)
+            {
+                if (_ags["DICT"] is null && _errors.Any(e => e.RuleId == 1800) == false)
+                {
+                    _errors.Add(new RuleError()
+                    {
+                        Status = "Fail",
+                        RuleName = "18",
+                        RuleId = 1800,
+                        Group = "DICT",
+                        Message = "DICT table not found. See error log under Rule 9 for a list of non-standard headings that need to be defined in a DICT table.",
+                    });
+                }
+            }
+
+            var fileDictTableFilteredByGroup = _ags["DICT"]?["DICT_GRP"].FilterRowsBy(group.Name);
             var fileDictTableName = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", AgsDescriptor.GROUP);
 
             if (stdDictTableName.Any() == false && fileDictTableName.Any() == false)
@@ -178,10 +194,9 @@ namespace AgsVerifierLibrary.Rules
                 return;
             }
 
-            var stdDictTableHeadings = stdDictTableFilteredByGroup.AndBy("DICT_TYPE", AgsDescriptor.HEADING).AllOf("DICT_HDNG");
             var fileDictTableHeadings = fileDictTableFilteredByGroup.AndBy("DICT_TYPE", AgsDescriptor.HEADING).AllOf("DICT_HDNG");
 
-            var combinedDictTableHeadings = stdDictTableHeadings.Concat(fileDictTableHeadings).Distinct();
+            var combinedDictTableHeadings = stdDictTableHeadings.Concat(fileDictTableHeadings ?? Array.Empty<dynamic>()).Distinct();
 
             var groupHeadings = group.ReturnDescriptor(AgsDescriptor.HEADING);
 
@@ -256,7 +271,7 @@ namespace AgsVerifierLibrary.Rules
                             RuleName = "10a",
                             RuleId = 1011,
                             Group = group.Name,
-                            RowNumber = (int)row["Index"],
+                            RowNumber = row.Index,
                             Message = $"Duplicate key field combination: {duplicateKey.Key}",
                         });
                     }
@@ -300,7 +315,7 @@ namespace AgsVerifierLibrary.Rules
                     RuleName = "10b",
                     RuleId = 1021,
                     Group = group.Name,
-                    RowNumber = (int)requiredRow["Index"],
+                    RowNumber = requiredRow.Index,
                     Message = $"REQUIRED field(s) containing empty values: ...{requiredRow.ToStringByStatus(AgsStatus.REQUIRED)}",
                 });
             }
@@ -518,7 +533,7 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule18a(AgsGroup group)
         {
-            var dictHeadings = _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AllOf("DICT_HDNG");
+            var dictHeadings = _ags["DICT"] is null ? Array.Empty<string>() : _ags["DICT"]["DICT_GRP"].FilterRowsBy(group.Name).AllOf("DICT_HDNG");
             var groupHeadings = group.Columns.Select(c => c.Heading).ToList();
 
             var intersectDictWithFile = dictHeadings.Intersect(groupHeadings).ToArray();

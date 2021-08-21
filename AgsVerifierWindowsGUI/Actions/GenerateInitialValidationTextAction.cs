@@ -3,6 +3,7 @@ using AgsVerifierLibrary.Extensions;
 using System;
 using System.Reflection;
 using System.Text;
+using static AgsVerifierLibrary.Enums.EnumTools;
 
 namespace AgsVerifierWindowsGUI.Actions
 {
@@ -14,7 +15,7 @@ namespace AgsVerifierWindowsGUI.Actions
 
             sb.AppendLine($"AGS validation report");
             sb.AppendLine($"File Path: {inputFilePath}");
-            sb.AppendLine($"Dictionary Version: {selectedAgsVersion.Name()}");
+            sb.AppendLine($"Dictionary Version: {FastStr(selectedAgsVersion)}");
             sb.AppendLine($"Program version: {Assembly.GetEntryAssembly().GetName().Version} Beta");
             sb.AppendLine($"Started at {timestamp} (UTC)");
             sb.AppendLine(new string('-', 140));

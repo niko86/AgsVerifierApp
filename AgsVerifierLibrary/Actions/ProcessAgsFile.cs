@@ -22,7 +22,7 @@ namespace AgsVerifierLibrary.Actions
         private readonly AgsContainer _stdDictionary;
         private AgsGroup _currentGroup;
 
-        public ProcessAgsFile(AgsContainer ags, List<RuleError> ruleErrors = null, AgsContainer stdDictionary = null)
+        public ProcessAgsFile(AgsContainer ags, List<RuleError> ruleErrors, AgsContainer stdDictionary)
         {
             _ags = ags;
             _ruleErrors = ruleErrors;
@@ -63,8 +63,7 @@ namespace AgsVerifierLibrary.Actions
                         break;
                 }
 
-                if (_stdDictionary is not null)
-                    PerRowRules.CheckRow(csv, _ruleErrors, _currentGroup);
+                PerRowRules.CheckRow(csv, _ruleErrors, _currentGroup);
             }
 
             FinalAssignments();
@@ -96,7 +95,7 @@ namespace AgsVerifierLibrary.Actions
 
         private void ProcessDataRow(CsvReader csv)
         {
-            _currentGroup["Index"].Data.Add(csv.Parser.RawRow);
+            _currentGroup["Index"].Data.Add(csv.Parser.RawRow.ToString());
 
             for (int i = 1; i < _currentGroup.Columns.Count; i++) // Starting at 1
             {
@@ -115,7 +114,7 @@ namespace AgsVerifierLibrary.Actions
 
         private void AssignProperties(CsvReader csv, AgsDescriptor descriptor)
         {
-            if (_currentGroup.Columns.Count < 2)
+            if (_currentGroup.Columns.Count == 0)
                 GenerateColumns(csv.Parser.Record.Length);
 
             _currentGroup.SetGroupDescriptorRowNumber(descriptor, csv.Parser.RawRow);
@@ -137,6 +136,9 @@ namespace AgsVerifierLibrary.Actions
 
         private void GenerateColumns(int length)
         {
+            var indexColumn = _currentGroup.AddColumn();
+            indexColumn.Heading = "Index";
+
             for (int i = 0; i < length; i++)
             {
                 _currentGroup.AddColumn();
@@ -147,11 +149,8 @@ namespace AgsVerifierLibrary.Actions
         {
             foreach (var group in _ags.Groups)
             {
-                if (_stdDictionary is not null)
-                {
-                    AssignParentGroup(group);
-                    AssignStatuses(group);
-                }
+                AssignParentGroup(group);
+                AssignStatuses(group);
             }
         }
 

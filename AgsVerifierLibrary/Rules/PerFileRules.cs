@@ -24,21 +24,22 @@ namespace AgsVerifierLibrary.Rules
 
         public void Process()
         {
+            Rule13(); // PROJ group
+            Rule14(); // TRAN group
+            Rule16(); // ABBR group
+            Rule17(); // TYPE group
+            Rule15(); // UNIT group
+
             Rule8();
             Rule11a(); // TRAN group
             Rule11b(); // TRAN group
-            Rule13(); // PROJ group
-            Rule14(); // TRAN group
-            Rule15(); // UNIT group
-            Rule16(); // ABBR group
             Rule16_1(); // NX column checks
-            Rule17(); // TYPE group
             Rule18(); // DICT group
             Rule20(); // FILE group
 
             // Rule11(); Covered by other rules
             // Rule12(); Covered by other rules
-            //Rule16a(); Implmented within Rule 16 method to reduce repetition
+            // Rule16a(); Implmented within Rule 16 method to reduce repetition
         }
 
         /// <summary>
@@ -347,7 +348,7 @@ namespace AgsVerifierLibrary.Rules
             {
                 var paTypeRows = paTypeColumn.Group.Rows.GroupBy(r => r[paTypeColumn.Heading]);
 
-                var paTypeNotInAbbrGroups = paTypeRows.Where(k => abbrCodes.Contains(k.Key) == false && exclusion.Contains(k.Key) == false);
+                var paTypeNotInAbbrGroups = paTypeRows.Where(k => abbrCodes.Contains((string)k.Key) == false && exclusion.Contains((string)k.Key) == false);
 
                 if (paTypeNotInAbbrGroups.Any())
                 {
@@ -379,7 +380,7 @@ namespace AgsVerifierLibrary.Rules
 
                         foreach (var splitValue in splitValues)
                         {
-                            if (abbrCodes.Contains(splitValue) == false)
+                            if (abbrCodes.Contains((string)splitValue) == false)
                             {
                                 foreach (var row in paTypeConcatGroup)
                                 {
@@ -461,17 +462,18 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule18()
         {
-            if (_ags["DICT"] is null)
-            {
-                _errors.Add(new RuleError()
-                {
-                    Status = "Fail",
-                    RuleName = "18",
-                    RuleId = 1800,
-                    Group = "DICT",
-                    Message = "DICT table not found. See error log under Rule 9 for a list of non-standard headings that need to be defined in a DICT table.",
-                });
-            }
+            // DICT only needed if non-standard groups or headings found.
+            //if (_ags["DICT"] is null)
+            //{
+            //    _errors.Add(new RuleError()
+            //    {
+            //        Status = "Fail",
+            //        RuleName = "18",
+            //        RuleId = 1800,
+            //        Group = "DICT",
+            //        Message = "DICT table not found. See error log under Rule 9 for a list of non-standard headings that need to be defined in a DICT table.",
+            //    });
+            //}
         }
 
         /// <summary>
@@ -481,6 +483,10 @@ namespace AgsVerifierLibrary.Rules
         /// </summary>
         private void Rule20()
         {
+            // Pass this rule for the present if File Path isn't set.
+            if (_ags.FilePath is null)
+                return;
+
             AgsGroup fileGroup = _ags["FILE"];
 
             var fSetColumns = _ags.GetAllColumnsOfHeading("FILE_FSET", fileGroup);
@@ -563,8 +569,6 @@ namespace AgsVerifierLibrary.Rules
             var missingFilesMask = fileGroupFileNames.Except(subFolderFiles);
 
             var missingSubFiles = fileGroup.Filter("FILE_NAME", missingFilesMask);
-
-            var test = fileGroup["FILE_NAME"].FilterRowsBy("EM-4m3_ML052");
 
             foreach (var missingSubFile in missingSubFiles)
             {

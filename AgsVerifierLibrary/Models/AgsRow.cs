@@ -17,7 +17,7 @@ namespace AgsVerifierLibrary.Models
             _rowIndex = rowIndex;
         }
 
-        public IEnumerator<dynamic> GetEnumerator()
+        public IEnumerator<object> GetEnumerator()
         {
             foreach (var column in _group.Columns)
             {
@@ -25,13 +25,13 @@ namespace AgsVerifierLibrary.Models
             }
         }
 
-        public object this[int index]
+        public dynamic this[int index]
         {
             get => _group.Columns[index][_rowIndex];
             set => _group.Columns[index][_rowIndex] = value;
         }
 
-        public object this[string columnName]
+        public dynamic this[string columnName]
         {
             get => _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex];
             set => _group.Columns.FirstOrDefault(c => c.Heading == columnName)[_rowIndex] = value;
@@ -42,7 +42,7 @@ namespace AgsVerifierLibrary.Models
             return string.Join('|', this);
         }
 
-        public int Index => (int)this[0];
+        public int Index => int.Parse(this[0]);
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }

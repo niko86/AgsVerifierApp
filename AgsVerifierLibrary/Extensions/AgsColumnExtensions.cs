@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using static AgsVerifierLibrary.Enums.EnumTools;
 
 namespace AgsVerifierLibrary.Extensions
 {
@@ -15,7 +16,7 @@ namespace AgsVerifierLibrary.Extensions
         public static void SetColumnDescriptor(this AgsColumn column, AgsDescriptor descriptor, string value)
         {
             _columnProperties
-                .FirstOrDefault(p => p.Name.ToUpper() == descriptor.Name())
+                .FirstOrDefault(p => p.Name.ToUpper() ==  FastStr(descriptor))
                 .SetValue(column, value, null);
         }
 
@@ -36,7 +37,7 @@ namespace AgsVerifierLibrary.Extensions
 
         public static IEnumerable<string> ReturnDescriptor(this IEnumerable<AgsColumn> columns, AgsDescriptor descriptor)
         {
-            PropertyInfo propertyInfo = _columnProperties.FirstOrDefault(p => p.Name.ToUpper() == descriptor.Name());
+            PropertyInfo propertyInfo = _columnProperties.FirstOrDefault(p => p.Name.ToUpper() == FastStr(descriptor));
             
             return columns.Where(x => !_exclusions.Contains(x.Heading)).Select(x => propertyInfo.GetValue(x).ToString());
         }

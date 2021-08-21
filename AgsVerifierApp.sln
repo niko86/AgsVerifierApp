@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AgsVerifierLibrary", "AgsVe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AgsVerifierWindowsGUI", "AgsVerifierWindowsGUI\AgsVerifierWindowsGUI.csproj", "{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgsVerifierLibraryTests", "AgsVerifierLibraryTests\AgsVerifierLibraryTests.csproj", "{2F37D51C-E52F-4835-854D-A2DDB55A709A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D4A231D4-F05E-42C1-B07E-091F0DB3DEC5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F37D51C-E52F-4835-854D-A2DDB55A709A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F37D51C-E52F-4835-854D-A2DDB55A709A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F37D51C-E52F-4835-854D-A2DDB55A709A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F37D51C-E52F-4835-854D-A2DDB55A709A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

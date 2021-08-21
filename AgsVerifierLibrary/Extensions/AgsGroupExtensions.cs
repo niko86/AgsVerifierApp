@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using static AgsVerifierLibrary.Enums.EnumTools;
 
 namespace AgsVerifierLibrary.Extensions
 {
@@ -17,7 +18,7 @@ namespace AgsVerifierLibrary.Extensions
             return group.Columns
                 .Where(c =>
                     c.Status is not null
-                    && c.Status.Contains(status.Name(), StringComparison.InvariantCultureIgnoreCase));
+                    && c.Status.Contains(FastStr(status), StringComparison.InvariantCultureIgnoreCase));
         }
 
         public static IEnumerable<AgsColumn> ColumnsByType(this AgsGroup group, AgsDataType dataType)
@@ -25,14 +26,14 @@ namespace AgsVerifierLibrary.Extensions
             return group.Columns
                 .Where(c =>
                     c.Type is not null
-                    && c.Type.Contains(dataType.Name(), StringComparison.InvariantCultureIgnoreCase));
+                    && c.Type.Contains(FastStr(dataType), StringComparison.InvariantCultureIgnoreCase));
         }
 
         public static void SetGroupDescriptorRowNumber(this AgsGroup group, AgsDescriptor descriptor, int value)
         {
             _groupProperties
                 .FirstOrDefault(p => p.Name
-                    .Contains(descriptor.Name() + "Row", StringComparison.InvariantCultureIgnoreCase))
+                    .Contains(FastStr(descriptor) + "Row", StringComparison.InvariantCultureIgnoreCase))
                 .SetValue(group, value, null);
         }
 
@@ -40,20 +41,20 @@ namespace AgsVerifierLibrary.Extensions
         {
             return (int)_groupProperties
                 .FirstOrDefault(p => p.Name
-                    .Contains(descriptor.Name() + "Row", StringComparison.InvariantCultureIgnoreCase))
+                    .Contains(FastStr(descriptor) + "Row", StringComparison.InvariantCultureIgnoreCase))
                 .GetValue(group);
         }
 
         public static IEnumerable<AgsColumn> GetColumnsOfType(this AgsGroup group, AgsDataType dataType)
         {
-            return group.Columns.Where(c => c.Type == dataType.Name());
+            return group.Columns.Where(c => c.Type == FastStr(dataType));
         }
 
         public static IEnumerable<AgsColumn> GetColumnsOfStatus(this AgsGroup group, AgsStatus status)
         {
             string[] exclusions = new string[] { string.Empty, null, "Index", "HEADING" };
 
-            return group.Columns.Where(c => !exclusions.Contains(c.Heading) && c.Status.Contains(status.Name()));
+            return group.Columns.Where(c => !exclusions.Contains(c.Heading) && c.Status.Contains(FastStr(status)));
         }
 
         public static IEnumerable<string> ReturnDescriptor(this AgsGroup group, AgsDescriptor descriptor)
@@ -62,7 +63,7 @@ namespace AgsVerifierLibrary.Extensions
 
             PropertyInfo propertyInfo = _columnProperties
                 .FirstOrDefault(p => p.Name
-                    .Contains(descriptor.Name(), StringComparison.InvariantCultureIgnoreCase));
+                    .Contains(FastStr(descriptor), StringComparison.InvariantCultureIgnoreCase));
 
             return group.Columns.Where(g => !exclusions.Contains(g.Heading)).Select(x => propertyInfo.GetValue(x).ToString());
         }

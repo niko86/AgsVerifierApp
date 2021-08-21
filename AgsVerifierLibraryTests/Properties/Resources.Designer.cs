@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace AgsVerifierLibrary.Properties {
+namespace AgsVerifierLibraryTests.Properties {
     using System;
     
     
@@ -39,7 +39,7 @@ namespace AgsVerifierLibrary.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("AgsVerifierLibrary.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("AgsVerifierLibraryTests.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -63,59 +63,9 @@ namespace AgsVerifierLibrary.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
-        internal static byte[] V403 {
+        internal static byte[] V410_rule1 {
             get {
-                object obj = ResourceManager.GetObject("V403", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] V403_ags {
-            get {
-                object obj = ResourceManager.GetObject("V403_ags", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] V404 {
-            get {
-                object obj = ResourceManager.GetObject("V404", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] V404_ags {
-            get {
-                object obj = ResourceManager.GetObject("V404_ags", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] V410 {
-            get {
-                object obj = ResourceManager.GetObject("V410", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        internal static byte[] V410_ags {
-            get {
-                object obj = ResourceManager.GetObject("V410_ags", resourceCulture);
+                object obj = ResourceManager.GetObject("V410_rule1", resourceCulture);
                 return ((byte[])(obj));
             }
         }

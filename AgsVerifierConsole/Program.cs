@@ -1,5 +1,8 @@
 ﻿using AgsVerifierLibrary;
+using AgsVerifierLibrary.Enums;
 using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace AgsVerifierConsole
 {
@@ -7,14 +10,13 @@ namespace AgsVerifierConsole
     {
         public static void Main()
         {
-            _ = new RunApp();
+            RunApp.Run();
         }
     }
 
-    public class RunApp
+    public static class RunApp
     {
-
-        public RunApp()
+        public static void Run()
         {
 
         }

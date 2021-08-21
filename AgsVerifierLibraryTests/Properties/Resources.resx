@@ -118,22 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="V403" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Standard_dictionary_v4_0_3x.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="V403_ags" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Standard_dictionary_v4_0_3.ags;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="V404" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Standard_dictionary_v4_0_4x.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="V404_ags" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Standard_dictionary_v4_0_4.ags;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="V410" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Standard_dictionary_v4_1_0.json;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="V410_ags" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Standard_dictionary_v4_1_0.ags;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  <data name="V410_rule1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\4.1-rule1.ags;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

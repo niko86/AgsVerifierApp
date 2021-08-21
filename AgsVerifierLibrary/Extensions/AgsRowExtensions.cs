@@ -3,6 +3,7 @@ using AgsVerifierLibrary.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static AgsVerifierLibrary.Enums.EnumTools;
 
 namespace AgsVerifierLibrary.Extensions
 {
@@ -15,17 +16,12 @@ namespace AgsVerifierLibrary.Extensions
 
         public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, AgsDescriptor descriptor)
         {
-            return rows?.Where(d => (string)d[key] == descriptor.Name());
+            return rows?.Where(d => (string)d[key] == FastStr(descriptor));
         }
 
         public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, AgsStatus status)
         {
-            return rows?.Where(d => (string)d[key] == status.Name());
-        }
-
-        public static IEnumerable<AgsRow> AndBy(this IEnumerable<AgsRow> rows, string key, int filter)
-        {
-            return rows.Where(d => (int)d[key] == filter);
+            return rows?.Where(d => (string)d[key] == FastStr(status));
         }
 
         public static string FirstOf(this IEnumerable<AgsRow> rows, string key)
@@ -58,7 +54,7 @@ namespace AgsVerifierLibrary.Extensions
                     if (row.Group[i].Status is null) // Skips index and heading column, inelegant?
                         continue;
 
-                    if (row.Group[i].Status.Contains(AgsStatus.REQUIRED.Name()) && string.IsNullOrWhiteSpace(row[i].ToString()))
+                    if (row.Group[i].Status.Contains(FastStr(AgsStatus.REQUIRED)) && string.IsNullOrWhiteSpace(row[i].ToString()))
                     {
                         temp.Add("???");
                         continue;
