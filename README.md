@@ -19,6 +19,8 @@ EPPlus 4 (Licenced under LGPL) - https://github.com/JanKallman/EPPlus
 
 CsvHelper (Dual licensed under MS-PL and Apache 2) - https://github.com/JoshClose/CsvHelper
 
+Newtonsoft json.NET (Licenced under MIT) - https://www.newtonsoft.com/json
+
 # License
 MIT Licence
 
